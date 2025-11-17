@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Dashboard - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row">
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4">Organization Dashboard</h1>
+        
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title" id="teachersCount">-</h5>
+                        <p class="card-text">Teachers</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title" id="coursesCount">-</h5>
+                        <p class="card-text">Courses</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title" id="studentsCount">-</h5>
+                        <p class="card-text">Students</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title" id="enrollmentsCount">-</h5>
+                        <p class="card-text">Enrollments</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3" id="orgTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="teachers-tab" data-bs-toggle="tab" data-bs-target="#teachers" type="button">
+                    Teachers
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button">
+                    Courses
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button">
+                    Students
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="orgTabContent">
+            <!-- Teachers Tab -->
+            <div class="tab-pane fade show active" id="teachers" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h3>Teachers</h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal">
+                        Add Teacher
+                    </button>
+                </div>
+                <div id="teachersList" class="list-group">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Tab -->
+            <div class="tab-pane fade" id="courses" role="tabpanel">
+                <h3>Organization Courses</h3>
+                <div id="coursesList" class="list-group">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div class="tab-pane fade" id="students" role="tabpanel">
+                <h3>Enrolled Students</h3>
+                <div id="studentsList" class="list-group">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Teacher Modal -->
+    <div class="modal fade" id="addTeacherModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Teacher to Organization</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTeacherForm">
+                        <div class="mb-3">
+                            <label class="form-label">Teacher Email</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <p class="text-muted small">The teacher must be registered in the system first.</p>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addTeacher()">Add Teacher</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        
+        async function loadDashboard() {
+            if (!token) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+
+            try {
+                // Load organization info
+                const userResponse = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!userResponse.ok) {
+                    throw new Error('Not authenticated');
+                }
+                
+                const user = await userResponse.json();
+                
+                // Load organization data
+                // Note: These endpoints need to be created in OrganizationController
+                loadTeachers();
+                loadCourses();
+                loadStudents();
+                loadStats();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadTeachers() {
+            try {
+                const response = await fetch('/api/lms/organization/teachers', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const teachers = await response.json();
+                    displayTeachers(teachers);
+                } else {
+                    document.getElementById('teachersList').innerHTML = 
+                        '<div class="alert alert-info">No teachers found. Add teachers to get started.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading teachers:', error);
+                document.getElementById('teachersList').innerHTML = 
+                    '<div class="alert alert-warning">Unable to load teachers. Please try again.</div>';
+            }
+        }
+
+        async function loadCourses() {
+            try {
+                const response = await fetch('/api/lms/organization/courses', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const courses = await response.json();
+                    displayCourses(courses);
+                } else {
+                    document.getElementById('coursesList').innerHTML = 
+                        '<div class="alert alert-info">No courses found.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading courses:', error);
+                document.getElementById('coursesList').innerHTML = 
+                    '<div class="alert alert-warning">Unable to load courses.</div>';
+            }
+        }
+
+        async function loadStudents() {
+            try {
+                const response = await fetch('/api/lms/organization/students', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const students = await response.json();
+                    displayStudents(students);
+                } else {
+                    document.getElementById('studentsList').innerHTML = 
+                        '<div class="alert alert-info">No students found.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+                document.getElementById('studentsList').innerHTML = 
+                    '<div class="alert alert-warning">Unable to load students.</div>';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/lms/organization/stats', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('teachersCount').textContent = stats.teachersCount || 0;
+                    document.getElementById('coursesCount').textContent = stats.coursesCount || 0;
+                    document.getElementById('studentsCount').textContent = stats.studentsCount || 0;
+                    document.getElementById('enrollmentsCount').textContent = stats.enrollmentsCount || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        function displayTeachers(teachers) {
+            const list = document.getElementById('teachersList');
+            
+            if (!teachers || teachers.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No teachers found. Add teachers to get started.</div>';
+                return;
+            }
+            
+            list.innerHTML = teachers.map(teacher => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5>${escapeHtml(teacher.name || teacher.email)}</h5>
+                            <p class="text-muted mb-0">${escapeHtml(teacher.email)}</p>
+                            ${teacher.qualifications ? `<p class="small">${escapeHtml(teacher.qualifications)}</p>` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeTeacher(${teacher.id})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayCourses(courses) {
+            const list = document.getElementById('coursesList');
+            
+            if (!courses || courses.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No courses found.</div>';
+                return;
+            }
+            
+            list.innerHTML = courses.map(course => `
+                <div class="list-group-item">
+                    <h5>${escapeHtml(course.title || 'Untitled Course')}</h5>
+                    <p class="text-muted">${escapeHtml(course.description ? course.description.substring(0, 150) + '...' : '')}</p>
+                    <a href="/ui/lms/courses/${course.id}" class="btn btn-sm btn-primary">View Course</a>
+                </div>
+            `).join('');
+        }
+
+        function displayStudents(students) {
+            const list = document.getElementById('studentsList');
+            
+            if (!students || students.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No students found.</div>';
+                return;
+            }
+            
+            list.innerHTML = students.map(student => `
+                <div class="list-group-item">
+                    <h5>${escapeHtml(student.name || student.email)}</h5>
+                    <p class="text-muted mb-0">${escapeHtml(student.email)}</p>
+                </div>
+            `).join('');
+        }
+
+        async function addTeacher() {
+            const form = document.getElementById('addTeacherForm');
+            const formData = new FormData(form);
+            const email = formData.get('email');
+            
+            if (!email || !email.trim()) {
+                alert('Please enter a teacher email');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/lms/organization/teachers', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email.trim() })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Teacher added successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addTeacherModal')).hide();
+                    form.reset();
+                    loadTeachers();
+                    loadStats();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to add teacher'));
+                }
+            } catch (error) {
+                console.error('Error adding teacher:', error);
+                alert('Failed to add teacher');
+            }
+        }
+
+        async function removeTeacher(teacherId) {
+            if (!confirm('Are you sure you want to remove this teacher from your organization?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/lms/organization/teachers/${teacherId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Teacher removed successfully!');
+                    loadTeachers();
+                    loadStats();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to remove teacher'));
+                }
+            } catch (error) {
+                console.error('Error removing teacher:', error);
+                alert('Failed to remove teacher');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Quiz - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MathJax for rendering mathematical notation -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script th:inline="none">
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <style>
+        .quiz-timer {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .question-card {
+            margin-bottom: 20px;
+        }
+        .option-item {
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .option-item:hover {
+            border-color: #0d6efd;
+            background-color: #f0f7ff;
+        }
+        .option-item.selected {
+            border-color: #0d6efd;
+            background-color: #e7f1ff;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row">
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="timer" class="quiz-timer" style="display: none;">
+        Time Remaining: <span id="timeDisplay">00:00</span>
+    </div>
+
+    <div class="container my-5">
+        <h2 id="quizTitle">Loading Quiz...</h2>
+        <div id="quizInfo" class="mb-4"></div>
+        
+        <div id="quizContent">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button id="submitBtn" class="btn btn-success btn-lg w-100" onclick="submitQuiz()" style="display: none;">
+                Submit Quiz
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const quizId = new URLSearchParams(window.location.search).get('id');
+        let quizData = null;
+        let attemptId = null;
+        let timeRemaining = null;
+        let timerInterval = null;
+        const answers = new Map();
+
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        async function loadQuiz() {
+            if (!quizId) {
+                document.getElementById('quizTitle').textContent = 'Quiz ID not provided';
+                return;
+            }
+
+            try {
+                // Start quiz attempt
+                const startResponse = await fetch(`/api/lms/quizzes/${quizId}/start`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!startResponse.ok) {
+                    const error = await startResponse.json();
+                    throw new Error(error.error || 'Failed to start quiz');
+                }
+                
+                const startResult = await startResponse.json();
+                attemptId = startResult.attemptId;
+                
+                // Get quiz for attempt
+                const quizResponse = await fetch(`/api/lms/quizzes/${quizId}/attempt`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!quizResponse.ok) {
+                    const errorText = await quizResponse.text();
+                    console.error('Failed to load quiz:', errorText);
+                    throw new Error('Failed to load quiz: ' + errorText);
+                }
+                
+                quizData = await quizResponse.json();
+                console.log('Quiz data loaded:', quizData);
+                console.log('Questions count:', quizData.questions ? quizData.questions.length : 0);
+                
+                if (!quizData.questions || quizData.questions.length === 0) {
+                    console.warn('No questions found in quiz data');
+                }
+                
+                displayQuiz(quizData);
+                
+                // Start timer if duration is set
+                if (quizData.durationMinutes) {
+                    timeRemaining = quizData.durationMinutes * 60;
+                    startTimer();
+                }
+            } catch (error) {
+                console.error('Error loading quiz:', error);
+                document.getElementById('quizTitle').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function displayQuiz(quiz) {
+            document.getElementById('quizTitle').textContent = quiz.title || 'Quiz';
+            
+            document.getElementById('quizInfo').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>Description:</strong> ${escapeHtml(quiz.description || 'N/A')}</p>
+                        <p><strong>Total Marks:</strong> ${quiz.totalMarks || 'N/A'}</p>
+                        <p><strong>Passing Marks:</strong> ${quiz.passingMarks || 'N/A'}</p>
+                        ${quiz.durationMinutes ? `<p><strong>Duration:</strong> ${quiz.durationMinutes} minutes</p>` : ''}
+                        ${quiz.maxAttempts ? `<p><strong>Max Attempts:</strong> ${quiz.maxAttempts}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            const questions = quiz.questions || [];
+            console.log('Displaying quiz with questions:', questions.length);
+            
+            if (questions.length === 0) {
+                document.getElementById('quizContent').innerHTML = 
+                    '<div class="alert alert-warning">No questions available in this quiz. Please contact your instructor.</div>';
+                return;
+            }
+            
+            let html = '';
+            questions.forEach((question, index) => {
+                html += `
+                    <div class="card question-card">
+                        <div class="card-body">
+                            <h5>Question ${index + 1}</h5>
+                            <div class="tex2jax_process">${escapeHtml(question.questionText || '')}</div>
+                            <p class="text-muted small">Points: ${question.marks || 1}</p>
+                            
+                            ${displayQuestionOptions(question, index)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('quizContent').innerHTML = html;
+            // Re-render MathJax after content is loaded
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([document.getElementById('quizContent')]).catch(function (err) {
+                    console.error('MathJax rendering error:', err);
+                });
+            }
+            document.getElementById('submitBtn').style.display = 'block';
+        }
+
+        function displayQuestionOptions(question, questionIndex) {
+            console.log('Displaying options for question:', question.id, 'Type:', question.type, 'Options:', question.options);
+            
+            if ((question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE') && question.options && question.options.length > 0) {
+                let html = '<div class="options-container">';
+                question.options.forEach((option, optIndex) => {
+                    html += `
+                        <div class="option-item" onclick="selectOption(${questionIndex}, ${option.id})">
+                            <input type="radio" name="question_${questionIndex}" value="${option.id}" 
+                                   id="opt_${questionIndex}_${optIndex}" style="display: none;">
+                            <label for="opt_${questionIndex}_${optIndex}" style="cursor: pointer; margin: 0; width: 100%;" class="tex2jax_process">
+                                ${escapeHtml(option.optionText || '')}
+                            </label>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                return html;
+            } else {
+                return `
+                    <div class="mb-3">
+                        <textarea class="form-control" id="answer_${questionIndex}" rows="4" 
+                                  placeholder="Enter your answer here..."></textarea>
+                    </div>
+                `;
+            }
+        }
+
+        function selectOption(questionIndex, optionId) {
+            const question = quizData.questions[questionIndex];
+            answers.set(question.id, optionId);
+            
+            // Update UI
+            const optionItems = document.querySelectorAll(`.question-card:nth-child(${questionIndex + 1}) .option-item`);
+            optionItems.forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        function startTimer() {
+            document.getElementById('timer').style.display = 'block';
+            
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up! Submitting quiz automatically...');
+                    submitQuiz();
+                }
+            }, 1000);
+            
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            document.getElementById('timeDisplay').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        async function submitQuiz() {
+            if (!attemptId) {
+                alert('Quiz attempt not started');
+                return;
+            }
+
+            // Collect all answers
+            const quizAnswers = [];
+            quizData.questions.forEach((question, index) => {
+                const answer = {
+                    questionId: question.id,
+                    selectedOptionId: null,
+                    answerText: null
+                };
+                
+                if (question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE') {
+                    answer.selectedOptionId = answers.get(question.id);
+                } else {
+                    const textArea = document.getElementById(`answer_${index}`);
+                    if (textArea) {
+                        answer.answerText = textArea.value;
+                    }
+                }
+                
+                quizAnswers.push(answer);
+            });
+
+            try {
+                const response = await fetch(`/api/lms/quizzes/attempts/${attemptId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ answers: quizAnswers })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    if (timerInterval) clearInterval(timerInterval);
+                    
+                    const message = `Quiz submitted successfully!\n\n` +
+                                  `Score: ${result.score}/${quizData.totalMarks}\n` +
+                                  `Status: ${result.passed ? 'PASSED ✓' : 'FAILED ✗'}`;
+                    alert(message);
+                    window.location.href = '/ui/lms/student/dashboard';
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to submit quiz'));
+                }
+            } catch (error) {
+                console.error('Submission error:', error);
+                alert('Failed to submit quiz. Please try again.');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', function(e) {
+            if (attemptId && !document.getElementById('submitBtn').disabled) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        loadQuiz();
+    </script>
+</body>
+</html>
+

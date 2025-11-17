@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Course - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .lecture-card {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .material-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h2 id="courseTitle">Loading Course...</h2>
+        <div id="courseInfo" class="mb-4"></div>
+        
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3" id="courseTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="lectures-tab" data-bs-toggle="tab" data-bs-target="#lectures" type="button">
+                    Lectures & Materials
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="assignments-tab" data-bs-toggle="tab" data-bs-target="#assignments" type="button">
+                    Assignments
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="quizzes-tab" data-bs-toggle="tab" data-bs-target="#quizzes" type="button">
+                    Quizzes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="announcements-tab" data-bs-toggle="tab" data-bs-target="#announcements" type="button">
+                    Announcements
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="courseTabContent">
+            <!-- Lectures Tab -->
+            <div class="tab-pane fade show active" id="lectures" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>Lectures</h4>
+                    <button class="btn btn-primary" onclick="showAddLectureModal()">Add Lecture</button>
+                </div>
+                <div id="lecturesList"></div>
+            </div>
+
+            <!-- Assignments Tab -->
+            <div class="tab-pane fade" id="assignments" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>Assignments</h4>
+                    <button class="btn btn-primary" onclick="showAddAssignmentModal()">Add Assignment</button>
+                </div>
+                <div id="assignmentsList"></div>
+            </div>
+
+            <!-- Quizzes Tab -->
+            <div class="tab-pane fade" id="quizzes" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>Quizzes</h4>
+                    <button class="btn btn-primary" onclick="showAddQuizModal()">Add Quiz</button>
+                </div>
+                <div id="quizzesList"></div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div class="tab-pane fade" id="announcements" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>Announcements</h4>
+                    <button class="btn btn-primary" onclick="showAddAnnouncementModal()">Add Announcement</button>
+                </div>
+                <div id="announcementsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Announcement Modal -->
+    <div class="modal fade" id="addAnnouncementModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Announcement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAnnouncementForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content *</label>
+                            <textarea class="form-control" name="content" rows="5" required></textarea>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="isImportant" id="isImportant">
+                            <label class="form-check-label" for="isImportant">Mark as Important</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Expires At (Optional)</label>
+                            <input type="datetime-local" class="form-control" name="expiresAt">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addAnnouncement()">Create Announcement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Lecture Modal -->
+    <div class="modal fade" id="addLectureModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Lecture</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addLectureForm">
+                        <div class="mb-3">
+                            <label class="form-label">Lecture Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sequence Order</label>
+                            <input type="number" class="form-control" name="sequenceOrder" value="1" min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Duration (minutes)</label>
+                            <input type="number" class="form-control" name="durationMinutes" min="1">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="isFree" id="lectureIsFree">
+                            <label class="form-check-label" for="lectureIsFree">Free Lecture (accessible without enrollment)</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addLecture()">Add Lecture</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Assignment Modal -->
+    <div class="modal fade" id="addAssignmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Assignment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAssignmentForm">
+                        <div class="mb-3">
+                            <label class="form-label">Assignment Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Instructions</label>
+                            <textarea class="form-control" name="instructions" rows="4" 
+                                      placeholder="Detailed instructions for students..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Max Score</label>
+                                <input type="number" class="form-control" name="maxScore" min="1" value="100">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Assignment Type</label>
+                                <select class="form-select" name="type">
+                                    <option value="ESSAY">Essay</option>
+                                    <option value="PROJECT">Project</option>
+                                    <option value="PRESENTATION">Presentation</option>
+                                    <option value="CODE">Code</option>
+                                    <option value="QUIZ">Quiz</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Date</label>
+                                <input type="datetime-local" class="form-control" name="startDate" id="assignmentStartDate">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Due Date *</label>
+                                <input type="datetime-local" class="form-control" name="dueDate" id="assignmentDueDate" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="allowLateSubmission" id="allowLateSubmission" 
+                                   onchange="document.getElementById('latePenaltySection').style.display = this.checked ? 'block' : 'none';">
+                            <label class="form-check-label" for="allowLateSubmission">Allow Late Submissions</label>
+                        </div>
+                        <div class="mb-3" id="latePenaltySection" style="display: none;">
+                            <label class="form-label">Late Penalty (%)</label>
+                            <input type="number" class="form-control" name="latePenaltyPercent" min="0" max="100" value="10">
+                            <small class="form-text text-muted">Percentage penalty for late submissions</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addAssignment()">Create Assignment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Quiz Modal -->
+    <div class="modal fade" id="addQuizModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Quiz</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addQuizForm">
+                        <div class="mb-3">
+                            <label class="form-label">Quiz Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quiz Type</label>
+                                <select class="form-select" name="type">
+                                    <option value="QUIZ">Quiz</option>
+                                    <option value="EXAM">Exam</option>
+                                    <option value="ASSIGNMENT">Assignment</option>
+                                    <option value="PRACTICE">Practice</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Duration (minutes)</label>
+                                <input type="number" class="form-control" name="durationMinutes" min="1" placeholder="e.g., 60">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Total Marks</label>
+                                <input type="number" class="form-control" name="totalMarks" min="1" value="100">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Passing Marks</label>
+                                <input type="number" class="form-control" name="passingMarks" min="0" value="50">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Max Attempts</label>
+                                <input type="number" class="form-control" name="maxAttempts" min="1" value="1">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Date</label>
+                                <input type="datetime-local" class="form-control" name="startDate" id="quizStartDate">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">End Date</label>
+                                <input type="datetime-local" class="form-control" name="endDate" id="quizEndDate">
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="showResultsImmediately" id="showResultsImmediately" checked>
+                            <label class="form-check-label" for="showResultsImmediately">Show Results Immediately After Submission</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="shuffleQuestions" id="shuffleQuestions">
+                            <label class="form-check-label" for="shuffleQuestions">Shuffle Questions</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="shuffleOptions" id="shuffleOptions">
+                            <label class="form-check-label" for="shuffleOptions">Shuffle Options</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addQuiz()">Create Quiz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Material Modal -->
+    <div class="modal fade" id="uploadMaterialModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload Study Material (PDF/Document)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadMaterialForm">
+                        <input type="hidden" id="materialLectureId" name="lectureId">
+                        <div class="mb-3">
+                            <label class="form-label">Material Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Material Type</label>
+                            <select class="form-select" name="materialType" id="materialTypeSelect" onchange="updateFileInputAccept()">
+                                <option value="PDF">PDF</option>
+                                <option value="DOCUMENT">Document</option>
+                                <option value="VIDEO">Video</option>
+                                <option value="AUDIO">Audio</option>
+                                <option value="LINK">Link</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Upload File *</label>
+                            <input type="file" class="form-control" id="materialFile" accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv,.mp3,.wav,.ogg" required>
+                            <small class="form-text text-muted">
+                                <span id="fileSizeLimit">Max file size: 50MB (videos: 500MB)</span>
+                            </small>
+                            <div id="fileUploadStatus" class="mt-2"></div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="isFree" id="materialIsFree" checked>
+                            <label class="form-check-label" for="materialIsFree">Free Material (accessible without enrollment)</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="uploadMaterial()">Upload Material</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const courseId = new URLSearchParams(window.location.search).get('id');
+        let courseData = null;
+        let uploadedFileUrl = null;
+
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        async function loadCourse() {
+            if (!courseId) {
+                alert('Course ID not provided');
+                window.location.href = '/ui/lms/teacher/dashboard';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load course');
+                }
+                
+                courseData = await response.json();
+                displayCourse(courseData);
+                loadLectures();
+                loadAssignments();
+                loadQuizzes();
+            } catch (error) {
+                console.error('Error loading course:', error);
+                alert('Error loading course');
+            }
+        }
+
+        function displayCourse(course) {
+            document.getElementById('courseTitle').textContent = course.title || 'Course';
+            document.getElementById('courseInfo').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>Description:</strong> ${escapeHtml(course.description || '')}</p>
+                        <p><strong>Status:</strong> <span class="badge ${course.status === 'PUBLISHED' ? 'bg-success' : 'bg-secondary'}">${course.status || 'DRAFT'}</span></p>
+                        <p><strong>Price:</strong> ₹${course.price || 0}</p>
+                        <p><strong>Level:</strong> ${course.level || 'BEGINNER'}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadLectures() {
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}/lectures`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load lectures');
+                }
+                
+                const lectures = await response.json();
+                displayLectures(lectures);
+            } catch (error) {
+                console.error('Error loading lectures:', error);
+                document.getElementById('lecturesList').innerHTML = 
+                    '<div class="alert alert-danger">Failed to load lectures</div>';
+            }
+        }
+
+        function displayLectures(lectures) {
+            const list = document.getElementById('lecturesList');
+            
+            if (!lectures || lectures.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No lectures yet. Add your first lecture!</div>';
+                return;
+            }
+            
+            list.innerHTML = lectures.map(lecture => `
+                <div class="lecture-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h5>
+                                <span class="badge bg-secondary me-2">${lecture.sequenceOrder || 'N/A'}</span>
+                                ${escapeHtml(lecture.title || 'Untitled Lecture')}
+                                ${lecture.isFree ? '<span class="badge bg-success ms-2">FREE</span>' : ''}
+                            </h5>
+                            <p>${escapeHtml(lecture.description || '')}</p>
+                            ${lecture.durationMinutes ? `<small class="text-muted">Duration: ${lecture.durationMinutes} minutes</small>` : ''}
+                            <div id="materials-${lecture.id}" class="mt-3">
+                                <button class="btn btn-sm btn-outline-primary" onclick="showUploadMaterialModal(${lecture.id})">
+                                    📄 Upload PDF/Document
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="loadMaterials(${lecture.id})">
+                                    View Materials
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteLecture(${lecture.id})">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddLectureModal() {
+            document.getElementById('addLectureForm').reset();
+            new bootstrap.Modal(document.getElementById('addLectureModal')).show();
+        }
+
+        async function addLecture() {
+            const form = document.getElementById('addLectureForm');
+            const formData = new FormData(form);
+            
+            const lectureData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                sequenceOrder: parseInt(formData.get('sequenceOrder')) || 1,
+                durationMinutes: formData.get('durationMinutes') ? parseInt(formData.get('durationMinutes')) : null,
+                isFree: formData.get('isFree') === 'on'
+            };
+
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}/lectures`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(lectureData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Lecture added successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addLectureModal')).hide();
+                    form.reset();
+                    loadLectures();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to add lecture'));
+                }
+            } catch (error) {
+                console.error('Error adding lecture:', error);
+                alert('Failed to add lecture');
+            }
+        }
+
+        function showUploadMaterialModal(lectureId) {
+            document.getElementById('materialLectureId').value = lectureId;
+            document.getElementById('uploadMaterialForm').reset();
+            document.getElementById('materialFile').value = '';
+            uploadedFileUrl = null;
+            document.getElementById('fileUploadStatus').innerHTML = '';
+            updateFileInputAccept(); // Update file input based on default material type
+            new bootstrap.Modal(document.getElementById('uploadMaterialModal')).show();
+        }
+
+        // Update file input accept attribute based on material type
+        function updateFileInputAccept() {
+            const materialType = document.getElementById('materialTypeSelect').value;
+            const fileInput = document.getElementById('materialFile');
+            const sizeLimitText = document.getElementById('fileSizeLimit');
+            
+            if (materialType === 'VIDEO') {
+                fileInput.accept = '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv';
+                sizeLimitText.textContent = 'Max file size: 500MB (for videos)';
+            } else if (materialType === 'AUDIO') {
+                fileInput.accept = '.mp3,.wav,.ogg,.m4a,.aac';
+                sizeLimitText.textContent = 'Max file size: 100MB (for audio)';
+            } else if (materialType === 'PDF') {
+                fileInput.accept = '.pdf';
+                sizeLimitText.textContent = 'Max file size: 50MB';
+            } else if (materialType === 'DOCUMENT') {
+                fileInput.accept = '.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx';
+                sizeLimitText.textContent = 'Max file size: 50MB';
+            } else {
+                fileInput.accept = '.pdf,.doc,.docx,.txt,.ppt,.pptx,.mp4,.avi,.mov,.mp3,.wav';
+                sizeLimitText.textContent = 'Max file size: 50MB (videos: 500MB)';
+            }
+        }
+
+        // Handle file selection for material upload
+        document.getElementById('materialFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const materialType = document.getElementById('materialTypeSelect').value;
+            let maxSize = 50 * 1024 * 1024; // 50MB default
+            
+            if (materialType === 'VIDEO') {
+                maxSize = 500 * 1024 * 1024; // 500MB for videos
+            } else if (materialType === 'AUDIO') {
+                maxSize = 100 * 1024 * 1024; // 100MB for audio
+            }
+
+            if (file.size > maxSize) {
+                const maxSizeMB = maxSize / (1024 * 1024);
+                alert(`File size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+                e.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', 'material');
+
+            try {
+                document.getElementById('fileUploadStatus').innerHTML = 
+                    '<div class="spinner-border spinner-border-sm"></div> Uploading...';
+                
+                const response = await fetch('/api/lms/files/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                // Check for file size error first
+                if (response.status === 413) {
+                    throw new Error('File size exceeds maximum limit (50MB). Please choose a smaller file.');
+                }
+
+                let result;
+                let responseText = '';
+                try {
+                    responseText = await response.text();
+                    if (!responseText || responseText.trim() === '') {
+                        if (response.status === 413) {
+                            throw new Error('File size exceeds maximum limit (50MB)');
+                        }
+                        throw new Error('Empty response from server');
+                    }
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError, 'Response text:', responseText);
+                    if (response.status === 413) {
+                        throw new Error('File size exceeds maximum limit (50MB). Please choose a smaller file.');
+                    }
+                    // Try to extract error message from HTML or plain text response
+                    if (responseText.includes('size') || responseText.includes('exceeded')) {
+                        throw new Error('File size exceeds maximum limit (50MB)');
+                    }
+                    throw new Error('Server error: ' + response.status + ' ' + response.statusText);
+                }
+                
+                if (response.ok) {
+                    uploadedFileUrl = result.fileUrl;
+                    document.getElementById('fileUploadStatus').innerHTML = 
+                        `<div class="alert alert-success">✓ File uploaded: ${escapeHtml(file.name)}</div>`;
+                } else {
+                    throw new Error(result.error || result.message || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                let errorMessage = 'Upload failed';
+                if (error.message && error.message.includes('size')) {
+                    errorMessage = 'File size exceeds the maximum limit (50MB). Please choose a smaller file.';
+                } else if (error.message) {
+                    errorMessage = 'Upload failed: ' + error.message;
+                }
+                document.getElementById('fileUploadStatus').innerHTML = 
+                    `<div class="alert alert-danger">${errorMessage}</div>`;
+                uploadedFileUrl = null;
+            }
+        });
+
+        async function uploadMaterial() {
+            const form = document.getElementById('uploadMaterialForm');
+            const formData = new FormData(form);
+            const lectureId = parseInt(formData.get('lectureId'));
+
+            if (!uploadedFileUrl) {
+                alert('Please upload a file first');
+                return;
+            }
+
+            const materialData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                materialType: formData.get('materialType'),
+                fileUrl: uploadedFileUrl,
+                isFree: formData.get('isFree') === 'on'
+            };
+
+            try {
+                const response = await fetch(`/api/lms/files/material/${lectureId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(materialData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Material uploaded successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('uploadMaterialModal')).hide();
+                    form.reset();
+                    uploadedFileUrl = null;
+                    loadMaterials(lectureId);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to upload material'));
+                }
+            } catch (error) {
+                console.error('Error uploading material:', error);
+                alert('Failed to upload material');
+            }
+        }
+
+        async function loadMaterials(lectureId) {
+            try {
+                const response = await fetch(`/api/lms/lectures/${lectureId}/materials`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load materials');
+                }
+                
+                const materials = await response.json();
+                displayMaterials(lectureId, materials);
+            } catch (error) {
+                console.error('Error loading materials:', error);
+            }
+        }
+
+        function displayMaterials(lectureId, materials) {
+            const container = document.getElementById(`materials-${lectureId}`);
+            const existingContent = container.innerHTML;
+            
+            if (!materials || materials.length === 0) {
+                container.innerHTML = existingContent + 
+                    '<div class="mt-2"><small class="text-muted">No materials uploaded yet.</small></div>';
+                return;
+            }
+            
+            const materialsHtml = materials.map(material => `
+                <div class="material-item mt-2">
+                    <strong>${escapeHtml(material.title || 'Untitled')}</strong>
+                    <p class="small mb-1">${escapeHtml(material.description || '')}</p>
+                    <p class="small text-muted mb-1">Type: ${material.materialType || 'N/A'}</p>
+                    ${material.fileUrl ? 
+                        `<a href="${escapeHtml(material.fileUrl)}" class="btn btn-sm btn-primary" target="_blank">Download</a>` : 
+                        '<span class="text-muted small">No file</span>'}
+                </div>
+            `).join('');
+            
+            container.innerHTML = existingContent + 
+                '<div class="mt-2"><strong>Uploaded Materials:</strong>' + materialsHtml + '</div>';
+        }
+
+        async function loadAssignments() {
+            try {
+                const response = await fetch(`/api/lms/assignments/course/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const assignments = await response.json();
+                    displayAssignments(assignments);
+                } else {
+                    document.getElementById('assignmentsList').innerHTML = 
+                        '<div class="alert alert-info">No assignments yet.</div>';
+                }
+            } catch (error) {
+                document.getElementById('assignmentsList').innerHTML = 
+                    '<div class="alert alert-info">No assignments yet.</div>';
+            }
+        }
+
+        function displayAssignments(assignments) {
+            const list = document.getElementById('assignmentsList');
+            if (!assignments || assignments.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No assignments yet. Add your first assignment!</div>';
+                return;
+            }
+            list.innerHTML = assignments.map(a => {
+                const dueDate = a.dueDate ? new Date(a.dueDate) : null;
+                const isOverdue = dueDate && new Date() > dueDate;
+                return `
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>${escapeHtml(a.title || 'Untitled')} 
+                                        <span class="badge bg-secondary">${a.type || 'ESSAY'}</span>
+                                    </h6>
+                                    <p class="small">${escapeHtml(a.description || '')}</p>
+                                    <div class="small">
+                                        <span class="text-muted">Max Score: ${a.maxScore || 'N/A'}</span>
+                                        ${dueDate ? `<span class="${isOverdue ? 'text-danger' : 'text-muted'} ms-2">
+                                            Due: ${dueDate.toLocaleString()} ${isOverdue ? '(Overdue)' : ''}
+                                        </span>` : ''}
+                                    </div>
+                                    ${a.allowLateSubmission ? '<span class="badge bg-info">Late submissions allowed</span>' : ''}
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignment(${a.id})">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function deleteAssignment(assignmentId) {
+            if (!confirm('Are you sure you want to delete this assignment?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/lms/assignments/${assignmentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    alert('Assignment deleted successfully!');
+                    loadAssignments();
+                } else {
+                    const result = await response.json();
+                    alert('Error: ' + (result.error || 'Failed to delete assignment'));
+                }
+            } catch (error) {
+                console.error('Error deleting assignment:', error);
+                alert('Failed to delete assignment');
+            }
+        }
+
+        async function loadQuizzes() {
+            try {
+                const response = await fetch(`/api/lms/quizzes/course/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const quizzes = await response.json();
+                    console.log('Loaded quizzes:', quizzes); // Debug log
+                    displayQuizzes(quizzes);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to load quizzes:', response.status, errorText);
+                    document.getElementById('quizzesList').innerHTML = 
+                        '<div class="alert alert-warning">Failed to load quizzes. Please refresh the page.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading quizzes:', error);
+                document.getElementById('quizzesList').innerHTML = 
+                    '<div class="alert alert-danger">Error loading quizzes: ' + error.message + '</div>';
+            }
+        }
+
+        function displayQuizzes(quizzes) {
+            const list = document.getElementById('quizzesList');
+            if (!quizzes || quizzes.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">No quizzes yet. Add your first quiz!</div>';
+                return;
+            }
+            list.innerHTML = quizzes.map(q => {
+                const startDate = q.startDate ? new Date(q.startDate) : null;
+                const endDate = q.endDate ? new Date(q.endDate) : null;
+                const isActive = (!startDate || new Date() >= startDate) && (!endDate || new Date() <= endDate);
+                return `
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>${escapeHtml(q.title || 'Untitled')} 
+                                        <span class="badge bg-secondary">${q.type || 'QUIZ'}</span>
+                                        ${isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
+                                    </h6>
+                                    <p class="small">${escapeHtml(q.description || '')}</p>
+                                    <div class="small text-muted">
+                                        <span>Total Marks: ${q.totalMarks || 'N/A'}</span>
+                                        <span class="ms-2">Passing: ${q.passingMarks || 'N/A'}</span>
+                                        ${q.durationMinutes ? `<span class="ms-2">Duration: ${q.durationMinutes} min</span>` : ''}
+                                        <span class="ms-2">Max Attempts: ${q.maxAttempts || 1}</span>
+                                    </div>
+                                    ${startDate ? `<p class="small text-muted mb-0">Start: ${startDate.toLocaleString()}</p>` : ''}
+                                    ${endDate ? `<p class="small text-muted mb-0">End: ${endDate.toLocaleString()}</p>` : ''}
+                                </div>
+                                <div>
+                                    <a href="/ui/lms/quiz/manage?id=${q.id}" class="btn btn-sm btn-primary">Manage Questions</a>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteQuiz(${q.id})">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function deleteQuiz(quizId) {
+            if (!confirm('Are you sure you want to delete this quiz? This will also delete all questions and attempts.')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/lms/quizzes/${quizId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    alert('Quiz deleted successfully!');
+                    loadQuizzes();
+                } else {
+                    const result = await response.json();
+                    alert('Error: ' + (result.error || 'Failed to delete quiz'));
+                }
+            } catch (error) {
+                console.error('Error deleting quiz:', error);
+                alert('Failed to delete quiz');
+            }
+        }
+
+        function showAddAssignmentModal() {
+            document.getElementById('addAssignmentForm').reset();
+            // Set default due date to 7 days from now
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 7);
+            document.getElementById('assignmentDueDate').value = dueDate.toISOString().slice(0, 16);
+            new bootstrap.Modal(document.getElementById('addAssignmentModal')).show();
+        }
+
+        async function addAssignment() {
+            const form = document.getElementById('addAssignmentForm');
+            const formData = new FormData(form);
+            
+            // Validate required fields
+            if (!formData.get('title') || !formData.get('dueDate')) {
+                alert('Please fill in all required fields (Title and Due Date)');
+                return;
+            }
+
+            const assignmentData = {
+                title: formData.get('title'),
+                description: formData.get('description') || null,
+                instructions: formData.get('instructions') || null,
+                maxScore: formData.get('maxScore') ? parseInt(formData.get('maxScore')) : null,
+                dueDate: formData.get('dueDate') ? new Date(formData.get('dueDate')).toISOString() : null,
+                startDate: formData.get('startDate') ? new Date(formData.get('startDate')).toISOString() : null,
+                allowLateSubmission: formData.get('allowLateSubmission') === 'on',
+                latePenaltyPercent: formData.get('allowLateSubmission') === 'on' && formData.get('latePenaltyPercent') ? parseInt(formData.get('latePenaltyPercent')) : null,
+                type: formData.get('type') || 'ESSAY',
+                attachmentUrl: null
+            };
+
+            try {
+                const response = await fetch(`/api/lms/assignments/course/${courseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(assignmentData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Assignment created successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addAssignmentModal')).hide();
+                    form.reset();
+                    loadAssignments();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to create assignment'));
+                }
+            } catch (error) {
+                console.error('Error creating assignment:', error);
+                alert('Failed to create assignment');
+            }
+        }
+
+        function showAddQuizModal() {
+            document.getElementById('addQuizForm').reset();
+            // Set default end date to 30 days from now
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 30);
+            document.getElementById('quizEndDate').value = endDate.toISOString().slice(0, 16);
+            new bootstrap.Modal(document.getElementById('addQuizModal')).show();
+        }
+
+        async function addQuiz() {
+            const form = document.getElementById('addQuizForm');
+            const formData = new FormData(form);
+            
+            // Validate required fields
+            if (!formData.get('title')) {
+                alert('Please enter a quiz title');
+                return;
+            }
+
+            const quizData = {
+                title: formData.get('title'),
+                description: formData.get('description') || null,
+                type: formData.get('type') || 'QUIZ',
+                totalMarks: formData.get('totalMarks') ? parseInt(formData.get('totalMarks')) : null,
+                passingMarks: formData.get('passingMarks') ? parseInt(formData.get('passingMarks')) : null,
+                durationMinutes: formData.get('durationMinutes') ? parseInt(formData.get('durationMinutes')) : null,
+                maxAttempts: formData.get('maxAttempts') ? parseInt(formData.get('maxAttempts')) : 1,
+                startDate: formData.get('startDate') ? new Date(formData.get('startDate')).toISOString() : null,
+                endDate: formData.get('endDate') ? new Date(formData.get('endDate')).toISOString() : null,
+                showResultsImmediately: formData.get('showResultsImmediately') === 'on',
+                shuffleQuestions: formData.get('shuffleQuestions') === 'on',
+                shuffleOptions: formData.get('shuffleOptions') === 'on'
+            };
+
+            try {
+                const response = await fetch(`/api/lms/quizzes/course/${courseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(quizData)
+                });
+
+                let result;
+                try {
+                    const responseText = await response.text();
+                    if (!responseText) {
+                        throw new Error('Empty response from server');
+                    }
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    if (response.ok) {
+                        // If response is OK but can't parse, assume success
+                        result = { message: 'Quiz created successfully' };
+                    } else {
+                        throw new Error('Server error: ' + response.status + ' ' + response.statusText);
+                    }
+                }
+                
+                if (response.ok) {
+                    console.log('Quiz created successfully:', result); // Debug log
+                    alert('Quiz created successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addQuizModal')).hide();
+                    form.reset();
+                    // Wait a bit before reloading to ensure the quiz is saved
+                    setTimeout(() => {
+                        loadQuizzes();
+                    }, 500);
+                } else {
+                    console.error('Quiz creation failed:', result);
+                    alert('Error: ' + (result.error || 'Failed to create quiz'));
+                }
+            } catch (error) {
+                console.error('Error creating quiz:', error);
+                alert('Failed to create quiz: ' + error.message);
+            }
+        }
+
+        async function deleteLecture(lectureId) {
+            if (!confirm('Are you sure you want to delete this lecture? This will also delete all study materials associated with it.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/lms/lectures/${lectureId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Lecture deleted successfully!');
+                    loadLectures();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to delete lecture'));
+                }
+            } catch (error) {
+                console.error('Error deleting lecture:', error);
+                alert('Failed to delete lecture');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadAnnouncements() {
+            if (!courseId) {
+                console.log('No courseId available for loading announcements');
+                return;
+            }
+
+            console.log('Loading announcements for course:', courseId);
+
+            try {
+                const response = await fetch(`/api/lms/announcements/course/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                console.log('Announcements response status:', response.status);
+
+                if (response.ok) {
+                    const announcements = await response.json();
+                    console.log('Loaded announcements:', announcements);
+                    console.log('Number of announcements:', announcements ? announcements.length : 0);
+                    if (announcements && Array.isArray(announcements)) {
+                        displayAnnouncements(announcements);
+                    } else {
+                        console.error('Announcements is not an array:', announcements);
+                        const list = document.getElementById('announcementsList');
+                        if (list) {
+                            list.innerHTML = '<div class="alert alert-warning">Invalid response format</div>';
+                        }
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to load announcements:', response.status, errorText);
+                    const list = document.getElementById('announcementsList');
+                    if (list) {
+                        list.innerHTML = '<div class="alert alert-warning">Failed to load announcements. Status: ' + response.status + '</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading announcements:', error);
+                const list = document.getElementById('announcementsList');
+                if (list) {
+                    list.innerHTML = '<div class="alert alert-danger">Error loading announcements: ' + error.message + '</div>';
+                }
+            }
+        }
+
+        function displayAnnouncements(announcements) {
+            const list = document.getElementById('announcementsList');
+            if (!list) {
+                console.error('announcementsList element not found');
+                return;
+            }
+            
+            console.log('Displaying announcements. Input:', announcements);
+            
+            if (!announcements || announcements.length === 0) {
+                console.log('No announcements to display');
+                list.innerHTML = '<div class="alert alert-info">No announcements yet. Add your first announcement!</div>';
+                return;
+            }
+
+            // Filter out any null/invalid announcements and sort by date (newest first)
+            const validAnnouncements = announcements
+                .filter(a => {
+                    if (!a) {
+                        console.warn('Found null announcement');
+                        return false;
+                    }
+                    if (!a.id) {
+                        console.warn('Found announcement without id:', a);
+                        return false;
+                    }
+                    return true;
+                })
+                .sort((a, b) => {
+                    if (!a.createdAt && !b.createdAt) return 0;
+                    if (!a.createdAt) return 1;
+                    if (!b.createdAt) return -1;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+
+            console.log('Valid announcements after filtering:', validAnnouncements.length);
+
+            if (validAnnouncements.length === 0) {
+                console.log('No valid announcements after filtering');
+                list.innerHTML = '<div class="alert alert-info">No announcements yet. Add your first announcement!</div>';
+                return;
+            }
+
+            const html = validAnnouncements.map(announcement => {
+                const importantBadge = announcement.isImportant ? '<span class="badge bg-danger">Important</span>' : '';
+                const expiresBadge = announcement.expiresAt ? 
+                    `<span class="badge bg-warning text-dark">Expires: ${new Date(announcement.expiresAt).toLocaleDateString()}</span>` : '';
+                const createdAt = announcement.createdAt ? new Date(announcement.createdAt).toLocaleString() : 'Unknown date';
+                
+                return `
+                    <div class="card mb-3 ${announcement.isImportant ? 'border-danger' : ''}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5>${escapeHtml(announcement.title || 'Untitled')} ${importantBadge} ${expiresBadge}</h5>
+                                    <p>${escapeHtml(announcement.content || '')}</p>
+                                    <small class="text-muted">Posted: ${createdAt}</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAnnouncement(${announcement.id})">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (html) {
+                list.innerHTML = html;
+                console.log('Announcements displayed successfully');
+            } else {
+                console.error('Failed to generate HTML for announcements');
+                list.innerHTML = '<div class="alert alert-warning">Failed to display announcements</div>';
+            }
+        }
+
+        function showAddAnnouncementModal() {
+            document.getElementById('addAnnouncementForm').reset();
+            new bootstrap.Modal(document.getElementById('addAnnouncementModal')).show();
+        }
+
+        async function addAnnouncement() {
+            if (!courseId || !token) return;
+
+            const form = document.getElementById('addAnnouncementForm');
+            const formData = new FormData(form);
+
+            // Parse expiresAt properly
+            let expiresAt = null;
+            const expiresAtValue = formData.get('expiresAt');
+            if (expiresAtValue) {
+                // Convert datetime-local to ISO string
+                const date = new Date(expiresAtValue);
+                expiresAt = date.toISOString();
+            }
+
+            const announcementData = {
+                title: formData.get('title'),
+                content: formData.get('content'),
+                isImportant: formData.get('isImportant') === 'on',
+                expiresAt: expiresAt
+            };
+
+            console.log('Creating announcement:', announcementData); // Debug log
+
+            try {
+                const response = await fetch(`/api/lms/announcements/course/${courseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(announcementData)
+                });
+
+                let result;
+                try {
+                    const responseText = await response.text();
+                    if (responseText) {
+                        result = JSON.parse(responseText);
+                    } else {
+                        result = { message: 'Announcement created successfully' };
+                    }
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    if (response.ok) {
+                        result = { message: 'Announcement created successfully' };
+                    } else {
+                        result = { error: 'Server error: ' + response.status };
+                    }
+                }
+                
+                if (response.ok) {
+                    alert('Announcement created successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addAnnouncementModal')).hide();
+                    form.reset();
+                    // Reload announcements after a short delay to ensure backend has processed
+                    setTimeout(() => {
+                        console.log('Reloading announcements after creation for course:', courseId);
+                        loadAnnouncements();
+                    }, 200);
+                } else {
+                    console.error('Error response:', result);
+                    alert('Error: ' + (result.error || 'Failed to create announcement'));
+                }
+            } catch (error) {
+                console.error('Error creating announcement:', error);
+                alert('Failed to create announcement: ' + error.message);
+            }
+        }
+
+        async function deleteAnnouncement(announcementId) {
+            if (!confirm('Are you sure you want to delete this announcement?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/lms/announcements/${announcementId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    result = { error: 'Failed to parse response' };
+                }
+                
+                if (response.ok) {
+                    alert('Announcement deleted successfully!');
+                    // Reload announcements after a short delay
+                    setTimeout(() => {
+                        loadAnnouncements();
+                    }, 100);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to delete announcement'));
+                }
+            } catch (error) {
+                console.error('Error deleting announcement:', error);
+                alert('Failed to delete announcement: ' + error.message);
+            }
+        }
+
+        // Update tab switching to load announcements
+        document.addEventListener('DOMContentLoaded', () => {
+            const announcementsTab = document.getElementById('announcements-tab');
+            if (announcementsTab) {
+                // Use both shown.bs.tab and click events to ensure it loads
+                announcementsTab.addEventListener('shown.bs.tab', (e) => {
+                    console.log('Announcements tab shown, loading announcements...');
+                    setTimeout(() => {
+                        loadAnnouncements();
+                    }, 50);
+                });
+                
+                announcementsTab.addEventListener('click', (e) => {
+                    console.log('Announcements tab clicked, will load announcements...');
+                    // Small delay to ensure tab is shown first
+                    setTimeout(() => {
+                        loadAnnouncements();
+                    }, 100);
+                });
+            }
+            
+            // Also load announcements if the tab is already active on page load
+            const activeTab = document.querySelector('.nav-link.active');
+            if (activeTab && activeTab.id === 'announcements-tab') {
+                console.log('Announcements tab is active on page load, loading announcements...');
+                setTimeout(() => {
+                    loadAnnouncements();
+                }, 200);
+            }
+        });
+
+        loadCourse();
+    </script>
+</body>
+</html>
+

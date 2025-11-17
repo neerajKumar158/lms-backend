@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS - Learning Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+        }
+        .course-card {
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        .course-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/ui/lms/courses">Browse Courses</a></li>
+                    <li class="nav-item" id="loginNavItem"><a class="nav-link" href="/ui/auth">Login</a></li>
+                    <li class="nav-item" id="studentDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/student/dashboard">My Dashboard</a></li>
+                    <li class="nav-item" id="teacherDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/teacher/dashboard">My Dashboard</a></li>
+                    <li class="nav-item" id="orgDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/organization/dashboard">My Dashboard</a></li>
+                    <li class="nav-item" id="logoutNavItem" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-4 mb-4">Welcome to Learning Management System</h1>
+            <p class="lead mb-4">Learn, Teach, and Grow with our comprehensive LMS platform</p>
+            <a href="/ui/lms/courses" class="btn btn-light btn-lg">Explore Courses</a>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <h2 class="text-center mb-5">Featured Courses</h2>
+        <div id="coursesGrid" class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-light py-5" id="featuresSection">
+        <div class="container">
+            <div class="row text-center" id="featuresRow">
+                <!-- Features will be dynamically loaded based on user role -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2024 LMS Portal. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentUserType = null;
+
+        async function checkUserRole() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Not logged in - show login link
+                document.getElementById('loginNavItem').style.display = 'block';
+                return Promise.resolve();
+            }
+
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUserType = user.userType || user.user_type;
+                    
+                    // Hide login, show appropriate dashboard and logout
+                    document.getElementById('loginNavItem').style.display = 'none';
+                    document.getElementById('logoutNavItem').style.display = 'block';
+                    
+                    // Show role-specific dashboard
+                    if (currentUserType === 'STUDENT') {
+                        document.getElementById('studentDashboardNavItem').style.display = 'block';
+                    } else if (currentUserType === 'TEACHER') {
+                        document.getElementById('teacherDashboardNavItem').style.display = 'block';
+                    } else if (currentUserType === 'ORGANIZATION') {
+                        document.getElementById('orgDashboardNavItem').style.display = 'block';
+                    }
+                } else {
+                    // Token invalid, clear it
+                    localStorage.removeItem('token');
+                    document.getElementById('loginNavItem').style.display = 'block';
+                }
+                return Promise.resolve();
+            } catch (error) {
+                console.error('Error checking user role:', error);
+                document.getElementById('loginNavItem').style.display = 'block';
+                return Promise.resolve();
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        function loadRoleSpecificFeatures() {
+            const featuresRow = document.getElementById('featuresRow');
+            
+            if (!currentUserType) {
+                // Not logged in - show all features
+                featuresRow.innerHTML = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>👨‍🎓 For Students</h3>
+                                <p>Access study materials, take courses, attend live sessions, and track your progress.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>👨‍🏫 For Teachers</h3>
+                                <p>Create courses, upload materials, conduct live sessions, and manage your students.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>🏢 For Organizations</h3>
+                                <p>Manage teachers, courses, and students. Offer comprehensive learning solutions.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentUserType === 'STUDENT') {
+                // Student - show only student features
+                featuresRow.innerHTML = `
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>📚 My Courses</h3>
+                                <p>Access all your enrolled courses, study materials, and track your learning progress.</p>
+                                <a href="/ui/lms/student/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>📝 Assignments & Quizzes</h3>
+                                <p>Submit assignments, take quizzes, and view your grades and report cards.</p>
+                                <a href="/ui/lms/student/dashboard" class="btn btn-primary">View My Work</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentUserType === 'TEACHER') {
+                // Teacher - show only teacher features
+                featuresRow.innerHTML = `
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>📖 Course Management</h3>
+                                <p>Create and manage courses, upload materials, create assignments and quizzes.</p>
+                                <a href="/ui/lms/teacher/dashboard" class="btn btn-primary">Manage Courses</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>🎥 Live Sessions</h3>
+                                <p>Schedule and conduct live sessions, interact with students in real-time.</p>
+                                <a href="/ui/lms/teacher/dashboard" class="btn btn-primary">Schedule Session</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentUserType === 'ORGANIZATION') {
+                // Organization - show organization features
+                featuresRow.innerHTML = `
+                    <div class="col-md-12 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3>🏢 Organization Management</h3>
+                                <p>Manage teachers, courses, and students. Offer comprehensive learning solutions for your organization.</p>
+                                <a href="/ui/lms/organization/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadFeaturedCourses() {
+            try {
+                const response = await fetch('/api/lms/courses/featured');
+                const courses = await response.json();
+                const grid = document.getElementById('coursesGrid');
+                
+                if (courses.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center"><p>No featured courses available yet.</p></div>';
+                    return;
+                }
+                
+                grid.innerHTML = courses.map(course => `
+                    <div class="col-md-4 mb-4">
+                        <div class="card course-card h-100">
+                            ${course.thumbnailUrl ? `<img src="${course.thumbnailUrl}" class="card-img-top" alt="${course.title}" style="height: 200px; object-fit: cover;">` : ''}
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${course.title}</h5>
+                                <p class="card-text flex-grow-1">${course.description ? course.description.substring(0, 120) + '...' : ''}</p>
+                                <div class="mt-auto">
+                                    <p class="mb-2">
+                                        <span class="badge bg-primary">${course.level || 'BEGINNER'}</span>
+                                        ${course.price === 0 || course.price === '0.00' ? '<span class="badge bg-success ms-2">FREE</span>' : `<span class="text-muted">₹${course.price}</span>`}
+                                    </p>
+                                    <a href="/ui/lms/courses/${course.id}" class="btn btn-primary w-100">View & Study</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading featured courses:', error);
+                document.getElementById('coursesGrid').innerHTML = 
+                    '<div class="col-12 text-center"><p class="text-danger">Failed to load featured courses.</p></div>';
+            }
+        }
+        
+        checkUserRole().then(() => {
+            loadRoleSpecificFeatures();
+        });
+        loadFeaturedCourses();
+    </script>
+</body>
+</html>
+

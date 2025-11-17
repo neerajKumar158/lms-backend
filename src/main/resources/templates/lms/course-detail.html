@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Details - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .course-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 0;
+        }
+        .lecture-item {
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+        .material-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/ui/lms">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="courseHeader" class="course-header">
+        <div class="container">
+            <div class="text-center">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-lg-8">
+                <div id="courseInfo" class="mb-4">
+                    <h2>Course Information</h2>
+                    <div id="courseDescription"></div>
+                </div>
+
+                <div id="lecturesSection">
+                    <h3 class="mb-4">Course Lectures</h3>
+                    <div id="lecturesList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading lectures...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="assignmentsSection" class="mt-5">
+                    <h3 class="mb-4">Assignments</h3>
+                    <div id="assignmentsList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading assignments...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quizzesSection" class="mt-5">
+                    <h3 class="mb-4">Quizzes</h3>
+                    <div id="quizzesList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading quizzes...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="liveSessionsSection" class="mt-5">
+                    <h3 class="mb-4">Live Sessions</h3>
+                    <div id="liveSessionsList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading live sessions...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="announcementsSection" class="mt-5">
+                    <h3 class="mb-4">Announcements</h3>
+                    <div id="announcementsList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading announcements...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="reviewsSection" class="mt-5">
+                    <h3 class="mb-4">Reviews & Ratings</h3>
+                    <div id="reviewsSummary" class="mb-3"></div>
+                    <div id="reviewsList"></div>
+                    <div id="reviewForm" class="mt-4" style="display: none;">
+                        <h5>Write a Review</h5>
+                        <form id="submitReviewForm">
+                            <div class="mb-3">
+                                <label class="form-label">Rating</label>
+                                <select class="form-select" name="rating" required>
+                                    <option value="">Select Rating</option>
+                                    <option value="5">5 Stars - Excellent</option>
+                                    <option value="4">4 Stars - Very Good</option>
+                                    <option value="3">3 Stars - Good</option>
+                                    <option value="2">2 Stars - Fair</option>
+                                    <option value="1">1 Star - Poor</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Review</label>
+                                <textarea class="form-control" name="reviewText" rows="4" placeholder="Share your experience with this course..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit Review</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-body">
+                        <h5 class="card-title">Course Details</h5>
+                        <div id="courseDetails">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2024 LMS Portal. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Extract courseId from URL or Thymeleaf
+        function getCourseIdFromUrl() {
+            const path = window.location.pathname;
+            const match = path.match(/\/courses\/(\d+)/);
+            if (match) {
+                return parseInt(match[1]);
+            }
+            // Fallback to Thymeleaf value
+            const thymeleafId = /*[[${courseId}]]*/ null;
+            return thymeleafId;
+        }
+        
+        const courseId = getCourseIdFromUrl();
+        let courseData = null;
+        let currentUserType = null;
+        let currentUserId = null;
+        
+        console.log('Course ID extracted:', courseId);
+        
+        // Check if user is logged in
+        function isLoggedIn() {
+            return localStorage.getItem('token') !== null;
+        }
+
+        // Check user role
+        async function checkUserRole() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUserType = user.userType || user.user_type;
+                    currentUserId = user.id;
+                }
+            } catch (error) {
+                console.error('Error checking user role:', error);
+            }
+        }
+        
+        // Check if course is free
+        function isCourseFree(price) {
+            return price === 0 || price === '0.00' || price === 0.00 || parseFloat(price) === 0;
+        }
+        
+        async function loadCourseDetails() {
+            if (!courseId || isNaN(courseId)) {
+                console.error('Invalid course ID:', courseId);
+                showError('Invalid course ID. Please go back and try again.');
+                return;
+            }
+            
+            try {
+                console.log('Loading course with ID:', courseId);
+                const courseResponse = await fetch(`/api/lms/courses/${courseId}`);
+                
+                if (!courseResponse.ok) {
+                    const errorText = await courseResponse.text();
+                    console.error('Error response:', errorText);
+                    showError(`Failed to load course: ${courseResponse.status}`);
+                    return;
+                }
+                
+                courseData = await courseResponse.json();
+                console.log('Course loaded:', courseData);
+                
+                if (!courseData) {
+                    showError('Course data is empty');
+                    return;
+                }
+                
+                // Display course header
+                displayCourseHeader(courseData);
+                
+                // Display course description
+                displayCourseDescription(courseData);
+                
+                // Check user role first
+                await checkUserRole();
+                
+                // Display course details sidebar
+                displayCourseDetails(courseData);
+                
+                // Load lectures based on course type
+                await loadLectures(courseId, courseData);
+                
+                // Load assignments and quizzes if user is enrolled or is teacher
+                if (currentUserType === 'TEACHER' || (isLoggedIn() && await checkEnrollment())) {
+                    await loadAssignmentsAndQuizzes(courseId);
+                }
+                
+                // Load live sessions
+                await loadLiveSessions(courseId);
+                
+                // Load announcements
+                await loadAnnouncements(courseId);
+                
+                // Load reviews
+                await loadReviews(courseId);
+                
+                // Show teacher-specific features if user is the instructor
+                if (currentUserType === 'TEACHER' && courseData.instructor && currentUserId === courseData.instructor.id) {
+                    showTeacherFeatures();
+                }
+                
+            } catch (error) {
+                console.error('Error loading course:', error);
+                showError('Failed to load course. Please try again later.');
+            }
+        }
+        
+        function displayCourseHeader(course) {
+            const price = course.price || 0;
+            const isFree = isCourseFree(price);
+            
+            document.getElementById('courseHeader').innerHTML = `
+                <div class="container">
+                    <h1 class="display-4 mb-3">${escapeHtml(course.title || 'Untitled Course')}</h1>
+                    <p class="lead">${escapeHtml(course.description || '')}</p>
+                    <div class="mt-3">
+                        <span class="badge bg-light text-dark me-2">${course.level || 'BEGINNER'}</span>
+                        ${isFree ? 
+                            '<span class="badge bg-success">FREE</span>' : 
+                            `<span class="badge bg-warning text-dark">₹${price}</span>`}
+                        ${course.featured ? '<span class="badge bg-info ms-2">⭐ Featured</span>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function displayCourseDescription(course) {
+            document.getElementById('courseDescription').innerHTML = `
+                <p class="lead">${escapeHtml(course.description || 'No description available.')}</p>
+                ${course.instructor ? `<p><strong>Instructor:</strong> ${escapeHtml(course.instructor.name || course.instructor.email || 'N/A')}</p>` : ''}
+                ${course.category ? `<p><strong>Category:</strong> ${escapeHtml(course.category.name || 'N/A')}</p>` : ''}
+                ${course.durationHours ? `<p><strong>Duration:</strong> ${course.durationHours} hours</p>` : ''}
+                ${course.language ? `<p><strong>Language:</strong> ${course.language}</p>` : ''}
+            `;
+        }
+        
+        async function displayCourseDetails(course) {
+            const price = course.price || 0;
+            const isFree = isCourseFree(price);
+            const loggedIn = isLoggedIn();
+            
+            // Check enrollment status if logged in
+            let isEnrolled = false;
+            if (loggedIn) {
+                try {
+                    const token = localStorage.getItem('token');
+                    const checkResponse = await fetch(`/api/lms/enrollments/course/${courseId}`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (checkResponse.ok) {
+                        const enrollmentData = await checkResponse.json();
+                        isEnrolled = enrollmentData.enrolled || false;
+                    }
+                } catch (error) {
+                    console.error('Error checking enrollment:', error);
+                }
+            }
+            
+            let enrollSection = '';
+            if (isEnrolled) {
+                enrollSection = `
+                    <div class="alert alert-success">
+                        <strong>✓ You are enrolled in this course!</strong>
+                    </div>
+                    <a href="/ui/lms/student/dashboard" class="btn btn-success w-100">Go to My Courses</a>
+                `;
+            } else if (isFree) {
+                enrollSection = `
+                    <div class="alert alert-success">
+                        <strong>This course is FREE!</strong><br>
+                        Start learning now without any payment.
+                    </div>
+                    ${!loggedIn ? 
+                        '<a href="/ui/auth" class="btn btn-primary w-100">Login to Enroll</a>' :
+                        '<button class="btn btn-success w-100" onclick="enrollInCourse()">Enroll Now (Free)</button>'}
+                `;
+            } else {
+                enrollSection = `
+                    <div class="alert alert-warning">
+                        <strong>Paid Course</strong><br>
+                        Price: <strong>₹${price}</strong>
+                    </div>
+                    ${!loggedIn ? 
+                        '<a href="/ui/auth" class="btn btn-primary w-100">Login to Purchase</a>' :
+                        '<button class="btn btn-warning w-100" onclick="proceedToPayment()">Proceed to Payment</button>'}
+                `;
+            }
+            
+            document.getElementById('courseDetails').innerHTML = `
+                <p><strong>Price:</strong> ${isFree ? 
+                    '<span class="text-success">FREE</span>' : 
+                    `₹${price}`}</p>
+                <p><strong>Level:</strong> ${course.level || 'BEGINNER'}</p>
+                ${course.durationHours ? `<p><strong>Duration:</strong> ${course.durationHours} hours</p>` : ''}
+                ${course.language ? `<p><strong>Language:</strong> ${course.language}</p>` : ''}
+                <hr>
+                ${enrollSection}
+            `;
+        }
+        
+        async function loadLectures(courseId, course) {
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}/lectures`);
+                if (!response.ok) {
+                    throw new Error('Failed to load lectures');
+                }
+                const lectures = await response.json();
+                
+                if (!lectures || lectures.length === 0) {
+                    document.getElementById('lecturesList').innerHTML = 
+                        '<p class="text-muted">No lectures available yet.</p>';
+                    return;
+                }
+                
+                const price = course.price || 0;
+                const isFree = isCourseFree(price);
+                const loggedIn = isLoggedIn();
+                
+                // If course is free, show all lectures
+                // If course is paid and user is not logged in, show only free preview lectures
+                let displayLectures = lectures;
+                if (!isFree && !loggedIn) {
+                    const freeLectures = lectures.filter(l => l.isFree === true);
+                    displayLectures = freeLectures.length > 0 ? freeLectures : lectures.slice(0, 2);
+                }
+                
+                document.getElementById('lecturesList').innerHTML = displayLectures.map((lecture, index) => `
+                    <div class="lecture-item">
+                        <h5>
+                            <span class="badge bg-secondary me-2">${lecture.sequenceOrder || index + 1}</span>
+                            ${escapeHtml(lecture.title || 'Untitled Lecture')}
+                            ${lecture.isFree ? '<span class="badge bg-success ms-2">FREE</span>' : ''}
+                        </h5>
+                        <p class="text-muted">${escapeHtml(lecture.description || '')}</p>
+                        ${lecture.durationMinutes ? `<small class="text-muted">Duration: ${lecture.durationMinutes} minutes</small>` : ''}
+                        <div id="materials-${lecture.id}" class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadMaterials(${lecture.id})">
+                                View Materials
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Show message if there are more lectures (for paid courses)
+                if (!isFree && lectures.length > displayLectures.length) {
+                    document.getElementById('lecturesList').innerHTML += `
+                        <div class="alert alert-info mt-3">
+                            <strong>More lectures available!</strong> ${loggedIn ? 
+                                'Complete payment to access all ' + lectures.length + ' lectures.' :
+                                'Login and purchase to access all ' + lectures.length + ' lectures.'}
+                            ${!loggedIn ? '<a href="/ui/auth" class="btn btn-primary btn-sm ms-2">Login Now</a>' : 
+                                '<button class="btn btn-warning btn-sm ms-2" onclick="proceedToPayment()">Pay Now</button>'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading lectures:', error);
+                document.getElementById('lecturesList').innerHTML = 
+                    '<p class="text-danger">Failed to load lectures. Please refresh the page.</p>';
+            }
+        }
+        
+        async function loadMaterials(lectureId) {
+            try {
+                const materialsDiv = document.getElementById(`materials-${lectureId}`);
+                materialsDiv.innerHTML = '<small class="text-muted">Loading materials...</small>';
+                
+                const response = await fetch(`/api/lms/lectures/${lectureId}/materials`);
+                if (!response.ok) {
+                    throw new Error('Failed to load materials');
+                }
+                const materials = await response.json();
+                
+                if (!materials || materials.length === 0) {
+                    materialsDiv.innerHTML = '<p class="text-muted small">No materials available for this lecture.</p>';
+                    return;
+                }
+                
+                materialsDiv.innerHTML = `
+                    <h6 class="mt-3 mb-2">Study Materials:</h6>
+                    ${materials.map(material => {
+                        const fileUrl = material.fileUrl;
+                        const hasFile = fileUrl && fileUrl.trim() !== '';
+                        const isExternalUrl = hasFile && (fileUrl.startsWith('http://') || fileUrl.startsWith('https://'));
+                        const isLocalFile = hasFile && fileUrl.startsWith('/uploads/');
+                        
+                        let downloadButton = '';
+                        if (hasFile) {
+                            if (isExternalUrl) {
+                                // External URL - open in new tab
+                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">Open Link</a>`;
+                            } else if (isLocalFile) {
+                                // Local file - use the uploads endpoint with error handling
+                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${escapeHtml(fileUrl)}'); return false;">Download</a>`;
+                            } else {
+                                // Relative path - try to serve it with error handling
+                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${escapeHtml(fileUrl)}'); return false;">Download</a>`;
+                            }
+                        } else {
+                            downloadButton = '<span class="text-muted small">File not available</span>';
+                        }
+                        
+                        return `
+                            <div class="material-item">
+                                <strong>${escapeHtml(material.title || 'Untitled')}</strong>
+                                <p class="small mb-1">${escapeHtml(material.description || '')}</p>
+                                ${downloadButton}
+                            </div>
+                        `;
+                    }).join('')}
+                `;
+            } catch (error) {
+                console.error('Error loading materials:', error);
+                document.getElementById(`materials-${lectureId}`).innerHTML = 
+                    '<p class="text-danger small">Failed to load materials.</p>';
+            }
+        }
+        
+        async function proceedToPayment() {
+            if (!isLoggedIn()) {
+                alert('Please login first to proceed with payment.');
+                window.location.href = '/ui/auth';
+                return;
+            }
+            if (!courseData) {
+                alert('Course information not loaded. Please refresh the page.');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/lms/payments/create-order/${courseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.id) {
+                    // Check if Razorpay is configured
+                    if (result.keyId && result.razorpayOrderId) {
+                        // Load Razorpay script if not already loaded
+                        if (typeof Razorpay === 'undefined') {
+                            const script = document.createElement('script');
+                            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                            script.onload = function() {
+                                openRazorpayCheckout(result, courseData);
+                            };
+                            document.head.appendChild(script);
+                        } else {
+                            openRazorpayCheckout(result, courseData);
+                        }
+                    } else {
+                        // Mock payment for development (when Razorpay not configured)
+                        if (confirm('Payment gateway not configured. Use mock payment for testing?')) {
+                            const mockPayment = {
+                                razorpay_payment_id: 'mock_payment_' + Date.now(),
+                                razorpay_order_id: result.id || result.razorpayOrderId,
+                                razorpay_signature: 'mock_signature'
+                            };
+                            await verifyPayment(mockPayment, result.id || result.razorpayOrderId);
+                        }
+                    }
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to create payment order'));
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert('Failed to initiate payment. Please try again.');
+            }
+        }
+        
+        function openRazorpayCheckout(orderData, courseData) {
+            const razorpayOrderId = orderData.razorpayOrderId || orderData.id;
+            const options = {
+                key: orderData.keyId,
+                amount: orderData.amount,
+                currency: orderData.currency || 'INR',
+                name: 'LMS Portal',
+                description: courseData.title,
+                order_id: razorpayOrderId,
+                handler: async function(response) {
+                    await verifyPayment(response, razorpayOrderId);
+                },
+                prefill: {
+                    email: orderData.userEmail || '',
+                    name: orderData.userName || ''
+                },
+                theme: {
+                    color: '#667eea'
+                },
+                modal: {
+                    ondismiss: function() {
+                        console.log('Payment cancelled');
+                    }
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+        
+        async function verifyPayment(paymentResponse, orderId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/lms/payments/verify/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                        razorpayOrderId: paymentResponse.razorpay_order_id,
+                        razorpaySignature: paymentResponse.razorpay_signature
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    alert('Payment successful! You are now enrolled in the course.');
+                    // Reload course details
+                    await loadCourseDetails();
+                } else {
+                    alert('Payment verification failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Payment verification error:', error);
+                alert('Failed to verify payment. Please contact support.');
+            }
+        }
+        
+        async function enrollInCourse() {
+            if (!isLoggedIn()) {
+                alert('Please login first to enroll in the course.');
+                window.location.href = '/ui/auth';
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/lms/enrollments/course/${courseId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Successfully enrolled in the course!');
+                    // Reload course details to show enrolled status
+                    await loadCourseDetails();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to enroll'));
+                }
+            } catch (error) {
+                console.error('Enrollment error:', error);
+                alert('Failed to enroll. Please try again.');
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('courseHeader').innerHTML = `
+                <div class="container text-center">
+                    <h1>Error</h1>
+                    <p>${escapeHtml(message)}</p>
+                    <a href="/ui/lms" class="btn btn-light">Go to Home</a>
+                </div>
+            `;
+            document.getElementById('courseDetails').innerHTML = '';
+            document.getElementById('lecturesList').innerHTML = '';
+        }
+        
+        async function loadAssignmentsAndQuizzes(courseId) {
+            const loggedIn = isLoggedIn();
+            const token = localStorage.getItem('token');
+            
+            if (!loggedIn || !token) {
+                // Show message that login is required
+                document.getElementById('assignmentsList').innerHTML = 
+                    '<div class="alert alert-info">Please <a href="/ui/auth">login</a> to view assignments and quizzes.</div>';
+                document.getElementById('quizzesList').innerHTML = 
+                    '<div class="alert alert-info">Please <a href="/ui/auth">login</a> to view assignments and quizzes.</div>';
+                return;
+            }
+            
+            // Check if user is enrolled
+            let isEnrolled = false;
+            try {
+                const checkResponse = await fetch(`/api/lms/enrollments/course/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (checkResponse.ok) {
+                    const enrollmentData = await checkResponse.json();
+                    isEnrolled = enrollmentData.enrolled || false;
+                }
+            } catch (error) {
+                console.error('Error checking enrollment:', error);
+            }
+            
+            // Load assignments with status (always try to load, but show enrollment message if not enrolled)
+            try {
+                const assignmentsResponse = await fetch(`/api/lms/assignments/course/${courseId}/with-status`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (assignmentsResponse.ok) {
+                    const assignments = await assignmentsResponse.json();
+                    if (!isEnrolled && assignments.length > 0) {
+                        document.getElementById('assignmentsList').innerHTML = 
+                            '<div class="alert alert-info">You need to enroll in this course to view and submit assignments. <a href="#" onclick="enrollInCourse(); return false;">Enroll Now</a></div>';
+                    } else {
+                        displayAssignments(assignments, token, isEnrolled);
+                    }
+                } else if (assignmentsResponse.status === 403) {
+                    document.getElementById('assignmentsList').innerHTML = 
+                        '<div class="alert alert-warning">You don\'t have permission to view assignments for this course.</div>';
+                } else {
+                    // Fallback to regular endpoint if status endpoint fails
+                    const fallbackResponse = await fetch(`/api/lms/assignments/course/${courseId}`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (fallbackResponse.ok) {
+                        const assignments = await fallbackResponse.json();
+                        displayAssignments(assignments, token, isEnrolled);
+                    } else {
+                        document.getElementById('assignmentsList').innerHTML = 
+                            '<div class="alert alert-warning">Failed to load assignments.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+                document.getElementById('assignmentsList').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load assignments. Please try again later.</div>';
+            }
+            
+            // Load quizzes with status (always try to load, but show enrollment message if not enrolled)
+            try {
+                const quizzesResponse = await fetch(`/api/lms/quizzes/course/${courseId}/with-status`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (quizzesResponse.ok) {
+                    const quizzes = await quizzesResponse.json();
+                    if (!isEnrolled && quizzes.length > 0) {
+                        document.getElementById('quizzesList').innerHTML = 
+                            '<div class="alert alert-info">You need to enroll in this course to view and take quizzes. <a href="#" onclick="enrollInCourse(); return false;">Enroll Now</a></div>';
+                    } else {
+                        displayQuizzes(quizzes, token, isEnrolled);
+                    }
+                } else if (quizzesResponse.status === 403) {
+                    document.getElementById('quizzesList').innerHTML = 
+                        '<div class="alert alert-warning">You don\'t have permission to view quizzes for this course.</div>';
+                } else {
+                    // Fallback to regular endpoint if status endpoint fails
+                    const fallbackResponse = await fetch(`/api/lms/quizzes/course/${courseId}`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (fallbackResponse.ok) {
+                        const quizzes = await fallbackResponse.json();
+                        displayQuizzes(quizzes, token, isEnrolled);
+                    } else {
+                        document.getElementById('quizzesList').innerHTML = 
+                            '<div class="alert alert-warning">Failed to load quizzes.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading quizzes:', error);
+                document.getElementById('quizzesList').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load quizzes. Please try again later.</div>';
+            }
+        }
+        
+        function displayAssignments(assignments, token, isEnrolled) {
+            const listDiv = document.getElementById('assignmentsList');
+            
+            if (!assignments || assignments.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No assignments available for this course yet.</div>';
+                return;
+            }
+            
+            // Filter out completed assignments or show them with status
+            const filteredAssignments = assignments.filter(assignment => {
+                // Option: Show all assignments (including completed)
+                return true;
+            });
+            
+            if (filteredAssignments.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-success">All assignments completed! Great job!</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = filteredAssignments.map(assignment => {
+                const dueDate = assignment.dueDate ? new Date(assignment.dueDate).toLocaleString() : 'No due date';
+                const now = new Date();
+                const isOverdue = assignment.dueDate && now > new Date(assignment.dueDate);
+                const overdueBadge = isOverdue && !assignment.isSubmitted ? '<span class="badge bg-danger ms-2">Overdue</span>' : '';
+                const lateBadge = assignment.allowLateSubmission ? '<span class="badge bg-warning text-dark ms-2">Late submission allowed</span>' : '';
+                
+                // Completion status
+                let statusBadge = '';
+                let submitButton = '';
+                
+                if (assignment.isSubmitted) {
+                    if (assignment.isGraded) {
+                        statusBadge = '<span class="badge bg-success ms-2">Completed & Graded</span>';
+                        const scoreText = assignment.score !== null && assignment.score !== undefined ? 
+                            `Score: ${assignment.score}/${assignment.maxScore}` : 'Graded';
+                        submitButton = `<button class="btn btn-success" disabled>${scoreText}</button>`;
+                    } else {
+                        statusBadge = '<span class="badge bg-info ms-2">Submitted (Pending Grading)</span>';
+                        submitButton = `<button class="btn btn-info" disabled>Submitted</button>`;
+                    }
+                } else {
+                    statusBadge = '<span class="badge bg-secondary ms-2">Not Started</span>';
+                    submitButton = isEnrolled ? 
+                        `<a href="/ui/lms/assignment/submit?id=${assignment.id}" class="btn btn-primary">Submit Assignment</a>` :
+                        `<button class="btn btn-secondary" disabled title="Enroll in the course to submit">Enroll to Submit</button>`;
+                }
+                
+                return `
+                    <div class="card mb-3 ${assignment.isSubmitted ? 'border-success' : ''}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5>${escapeHtml(assignment.title || 'Untitled Assignment')} ${statusBadge} ${overdueBadge} ${lateBadge}</h5>
+                                    <p class="text-muted">${escapeHtml(assignment.description || '')}</p>
+                                    <p><strong>Due Date:</strong> ${dueDate}</p>
+                                    <p><strong>Max Score:</strong> ${assignment.maxScore || 'N/A'}</p>
+                                    ${assignment.instructions ? `<p><strong>Instructions:</strong> ${escapeHtml(assignment.instructions)}</p>` : ''}
+                                </div>
+                                <div>
+                                    ${submitButton}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function displayQuizzes(quizzes, token, isEnrolled) {
+            const listDiv = document.getElementById('quizzesList');
+            
+            if (!quizzes || quizzes.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No quizzes available for this course yet.</div>';
+                return;
+            }
+            
+            // Filter out completed quizzes or show them with status
+            const filteredQuizzes = quizzes.filter(quiz => {
+                // Option: Show all quizzes (including completed)
+                return true;
+            });
+            
+            if (filteredQuizzes.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-success">All quizzes completed! Great job!</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = filteredQuizzes.map(quiz => {
+                const startDate = quiz.startDate ? new Date(quiz.startDate).toLocaleString() : 'Available now';
+                const endDate = quiz.endDate ? new Date(quiz.endDate).toLocaleString() : 'No end date';
+                const now = new Date();
+                const isAvailable = !quiz.startDate || now >= new Date(quiz.startDate);
+                const isExpired = quiz.endDate && now > new Date(quiz.endDate);
+                
+                let statusBadge = '';
+                let actionButton = '';
+                
+                // Check completion status
+                if (quiz.isCompleted) {
+                    statusBadge = '<span class="badge bg-success ms-2">Completed</span>';
+                    const scoreText = quiz.bestScore !== null && quiz.bestScore !== undefined ? 
+                        `Score: ${quiz.bestScore}/${quiz.totalMarks} (${quiz.bestPercentage || 0}%)` : 'Completed';
+                    const passedText = quiz.passed ? ' - Passed' : ' - Not Passed';
+                    actionButton = `<button class="btn btn-success" disabled>${scoreText}${passedText}</button>`;
+                } else if (isExpired) {
+                    statusBadge = '<span class="badge bg-danger ms-2">Expired</span>';
+                    actionButton = '<button class="btn btn-secondary" disabled>Quiz Expired</button>';
+                } else if (!isAvailable) {
+                    statusBadge = '<span class="badge bg-warning text-dark ms-2">Not Available Yet</span>';
+                    actionButton = '<button class="btn btn-secondary" disabled>Starts: ' + startDate + '</button>';
+                } else if (!isEnrolled) {
+                    statusBadge = '<span class="badge bg-info ms-2">Enroll Required</span>';
+                    actionButton = '<button class="btn btn-secondary" disabled title="Enroll in the course to take quiz">Enroll to Take</button>';
+                } else {
+                    statusBadge = '<span class="badge bg-primary ms-2">Available</span>';
+                    const attemptsText = quiz.maxAttempts && quiz.attemptsCount >= quiz.maxAttempts ? 
+                        ' (Max Attempts Reached)' : '';
+                    actionButton = `<a href="/ui/lms/quiz/take?id=${quiz.id}" class="btn btn-primary">Take Quiz${attemptsText}</a>`;
+                }
+                
+                return `
+                    <div class="card mb-3 ${quiz.isCompleted ? 'border-success' : ''}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5>${escapeHtml(quiz.title || 'Untitled Quiz')} ${statusBadge}</h5>
+                                    <p class="text-muted">${escapeHtml(quiz.description || '')}</p>
+                                    <p><strong>Total Marks:</strong> ${quiz.totalMarks || 'N/A'}</p>
+                                    <p><strong>Passing Marks:</strong> ${quiz.passingMarks || 'N/A'}</p>
+                                    <p><strong>Duration:</strong> ${quiz.durationMinutes || 'N/A'} minutes</p>
+                                    <p><strong>Available:</strong> ${startDate} to ${endDate}</p>
+                                    ${quiz.maxAttempts ? `<p><strong>Max Attempts:</strong> ${quiz.maxAttempts} ${quiz.attemptsCount ? `(Attempted: ${quiz.attemptsCount})` : ''}</p>` : ''}
+                                    ${quiz.isCompleted ? `<p class="text-success"><strong>Best Score:</strong> ${quiz.bestScore || 0}/${quiz.totalMarks} (${quiz.bestPercentage || 0}%)</p>` : ''}
+                                </div>
+                                <div>
+                                    ${actionButton}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function loadLiveSessions(courseId) {
+            try {
+                const token = localStorage.getItem('token');
+                const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+                
+                const response = await fetch(`/api/lms/live-sessions/course/${courseId}`, {
+                    headers: headers
+                });
+                
+                if (response.ok) {
+                    const sessions = await response.json();
+                    displayLiveSessions(sessions);
+                } else {
+                    document.getElementById('liveSessionsList').innerHTML = 
+                        '<div class="alert alert-info">No live sessions scheduled for this course.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading live sessions:', error);
+                document.getElementById('liveSessionsList').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load live sessions.</div>';
+            }
+        }
+
+        function displayLiveSessions(sessions) {
+            const listDiv = document.getElementById('liveSessionsList');
+            const token = localStorage.getItem('token');
+            const isEnrolled = courseData && courseData.enrolled;
+            
+            console.log('Displaying live sessions:', sessions); // Debug log
+            console.log('Is enrolled:', isEnrolled); // Debug log
+            
+            if (!sessions || sessions.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No live sessions scheduled for this course yet.</div>';
+                return;
+            }
+            
+            // Filter to show only upcoming and ongoing sessions
+            const now = new Date();
+            const activeSessions = sessions.filter(session => {
+                if (!session || !session.scheduledDateTime) return false;
+                const scheduledDate = new Date(session.scheduledDateTime);
+                return session.status === 'ONGOING' || 
+                       (session.status === 'SCHEDULED' && scheduledDate >= now);
+            });
+            
+            if (activeSessions.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No upcoming live sessions. Check back later!</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = activeSessions.map(session => {
+                if (!session || !session.id) {
+                    console.error('Invalid session data:', session);
+                    return '';
+                }
+                
+                const scheduledDate = session.scheduledDateTime ? new Date(session.scheduledDateTime) : null;
+                const isOngoing = session.status === 'ONGOING';
+                const isUpcoming = scheduledDate && scheduledDate > now;
+                const statusBadge = isOngoing ? 
+                    '<span class="badge bg-success">LIVE NOW</span>' : 
+                    '<span class="badge bg-primary">Upcoming</span>';
+                
+                // Allow joining if enrolled OR if user is logged in (backend will check enrollment)
+                // This way the button works and backend handles authorization
+                const canJoin = isEnrolled || token;
+                const joinButton = canJoin ? 
+                    `<a href="/ui/lms/live/${session.id}" class="btn btn-success" onclick="return handleJoinSession(${session.id}, ${isEnrolled})">
+                        <i class="bi bi-camera-video"></i> ${isOngoing ? 'Join Now' : 'Join at Scheduled Time'}
+                    </a>` :
+                    `<a href="/ui/auth" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Login to Join
+                    </a>`;
+                
+                return `
+                    <div class="card mb-3 ${isOngoing ? 'border-success' : ''}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5>${escapeHtml(session.title || 'Untitled Session')} ${statusBadge}</h5>
+                                    <p class="text-muted">${escapeHtml(session.description || '')}</p>
+                                    <p class="mb-1">
+                                        ${scheduledDate ? `<strong>Scheduled:</strong> ${scheduledDate.toLocaleString()}<br>` : ''}
+                                        <strong>Duration:</strong> ${session.durationMinutes || 'N/A'} minutes<br>
+                                        ${session.maxParticipants ? `<strong>Max Participants:</strong> ${session.maxParticipants}</strong>` : ''}
+                                    </p>
+                                </div>
+                                <div>
+                                    ${joinButton}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function handleJoinSession(sessionId, isEnrolled) {
+            if (!sessionId) {
+                console.error('Session ID is missing');
+                alert('Session ID is missing. Cannot join session.');
+                return false;
+            }
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first to join the session.');
+                window.location.href = '/ui/auth';
+                return false;
+            }
+            
+            if (!isEnrolled) {
+                if (!confirm('You are not enrolled in this course. You may not be able to join the session. Do you want to continue?')) {
+                    return false;
+                }
+            }
+            
+            console.log('Joining session:', sessionId);
+            window.location.href = `/ui/lms/live/${sessionId}`;
+            return false; // Prevent default link behavior
+        }
+
+        async function loadAnnouncements(courseId) {
+            if (!courseId) {
+                console.error('Course ID is missing for loading announcements');
+                return;
+            }
+            
+            try {
+                console.log('Loading announcements for course:', courseId);
+                const response = await fetch(`/api/lms/announcements/course/${courseId}`);
+                
+                console.log('Announcements response status:', response.status);
+                
+                if (response.ok) {
+                    const announcements = await response.json();
+                    console.log('Loaded announcements:', announcements);
+                    console.log('Number of announcements:', announcements ? announcements.length : 0);
+                    displayAnnouncements(announcements);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to load announcements:', response.status, errorText);
+                    let errorMessage = 'No announcements available.';
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.error || errorMessage;
+                    } catch (e) {
+                        // Not JSON, use text as is
+                    }
+                    document.getElementById('announcementsList').innerHTML = 
+                        '<div class="alert alert-info">' + errorMessage + '</div>';
+                }
+            } catch (error) {
+                console.error('Error loading announcements:', error);
+                document.getElementById('announcementsList').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load announcements: ' + error.message + '</div>';
+            }
+        }
+
+        function displayAnnouncements(announcements) {
+            const listDiv = document.getElementById('announcementsList');
+            
+            console.log('Displaying announcements:', announcements);
+            
+            if (!announcements || announcements.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No announcements for this course yet.</div>';
+                return;
+            }
+            
+            // Filter out any null/invalid announcements and sort by date (newest first)
+            const validAnnouncements = announcements
+                .filter(a => a && a.id)
+                .sort((a, b) => {
+                    if (!a.createdAt && !b.createdAt) return 0;
+                    if (!a.createdAt) return 1;
+                    if (!b.createdAt) return -1;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+            
+            console.log('Valid announcements to display:', validAnnouncements.length);
+            
+            if (validAnnouncements.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info">No announcements for this course yet.</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = validAnnouncements.map(announcement => {
+                const importantBadge = announcement.isImportant ? '<span class="badge bg-danger ms-2">Important</span>' : '';
+                const expiresBadge = announcement.expiresAt ? 
+                    `<span class="badge bg-warning text-dark ms-2">Expires: ${new Date(announcement.expiresAt).toLocaleDateString()}</span>` : '';
+                const createdAt = announcement.createdAt ? new Date(announcement.createdAt).toLocaleString() : 'Unknown date';
+                
+                return `
+                    <div class="card mb-3 ${announcement.isImportant ? 'border-danger' : ''}">
+                        <div class="card-body">
+                            <h5>${escapeHtml(announcement.title || 'Untitled')} ${importantBadge} ${expiresBadge}</h5>
+                            <p>${escapeHtml(announcement.content || '')}</p>
+                            <small class="text-muted">Posted: ${createdAt}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadReviews(courseId) {
+            try {
+                const response = await fetch(`/api/lms/reviews/course/${courseId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayReviewsSummary(data.summary);
+                    displayReviews(data.reviews || []);
+                    
+                    // Show review form if user is logged in and enrolled
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        // Check enrollment status
+                        try {
+                            const enrollmentCheck = await fetch(`/api/lms/enrollments/check?courseId=${courseId}`, {
+                                headers: { 'Authorization': 'Bearer ' + token }
+                            });
+                            if (enrollmentCheck.ok) {
+                                const enrollmentData = await enrollmentCheck.json();
+                                if (enrollmentData.enrolled) {
+                                    document.getElementById('reviewForm').style.display = 'block';
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error checking enrollment:', e);
+                        }
+                    }
+                } else {
+                    document.getElementById('reviewsList').innerHTML = 
+                        '<div class="alert alert-info">No reviews available yet.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+                document.getElementById('reviewsList').innerHTML = 
+                    '<div class="alert alert-warning">Failed to load reviews.</div>';
+            }
+        }
+
+        function displayReviewsSummary(summary) {
+            const summaryDiv = document.getElementById('reviewsSummary');
+            if (!summary || summary.totalReviews === 0) {
+                summaryDiv.innerHTML = '<div class="alert alert-info">No reviews yet. Be the first to review!</div>';
+                return;
+            }
+            
+            const stars = '⭐'.repeat(Math.round(summary.averageRating || 0));
+            summaryDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <h2>${(summary.averageRating || 0).toFixed(1)}</h2>
+                                <div class="text-warning">${stars}</div>
+                                <p class="text-muted">${summary.totalReviews} ${summary.totalReviews === 1 ? 'review' : 'reviews'}</p>
+                            </div>
+                            <div class="col-md-8">
+                                <h6>Rating Distribution</h6>
+                                ${[5, 4, 3, 2, 1].map(rating => {
+                                    const count = (summary.ratingDistribution && summary.ratingDistribution[rating]) || 0;
+                                    const percentage = summary.totalReviews > 0 ? (count / summary.totalReviews * 100) : 0;
+                                    return `
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>${rating} ⭐</span>
+                                                <span>${count}</span>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar" role="progressbar" style="width: ${percentage}%"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayReviews(reviews) {
+            const listDiv = document.getElementById('reviewsList');
+            if (!reviews || reviews.length === 0) {
+                listDiv.innerHTML = '<div class="alert alert-info mt-3">No reviews available yet.</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = reviews.map(review => {
+                const studentName = (review.student && review.student.name) || (review.student && review.student.email) || 'Anonymous';
+                return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <strong>${escapeHtml(studentName)}</strong>
+                                    <div class="text-warning">${'⭐'.repeat(review.rating || 0)}</div>
+                                </div>
+                                <small class="text-muted">${new Date(review.createdAt).toLocaleDateString()}</small>
+                            </div>
+                            ${review.reviewText ? `<p>${escapeHtml(review.reviewText)}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Handle review submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const reviewForm = document.getElementById('submitReviewForm');
+            if (reviewForm) {
+                reviewForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        alert('Please login to submit a review');
+                        window.location.href = '/ui/auth';
+                        return;
+                    }
+
+                    const formData = new FormData(reviewForm);
+                    const reviewData = {
+                        rating: parseInt(formData.get('rating')),
+                        reviewText: formData.get('reviewText')
+                    };
+
+                    if (!reviewData.rating || reviewData.rating < 1 || reviewData.rating > 5) {
+                        alert('Please select a valid rating');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/lms/reviews/course/${courseId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(reviewData)
+                        });
+
+                        const result = await response.json();
+                        if (response.ok) {
+                            alert('Review submitted successfully!');
+                            reviewForm.reset();
+                            await loadReviews(courseId);
+                        } else {
+                            alert('Error: ' + (result.error || 'Failed to submit review'));
+                        }
+                    } catch (error) {
+                        console.error('Error submitting review:', error);
+                        alert('Failed to submit review');
+                    }
+                });
+            }
+        });
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        async function checkEnrollment() {
+            const token = localStorage.getItem('token');
+            if (!token) return false;
+            
+            try {
+                const response = await fetch(`/api/lms/enrollments/course/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.enrolled || false;
+                }
+            } catch (error) {
+                console.error('Error checking enrollment:', error);
+            }
+            return false;
+        }
+
+        function showTeacherFeatures() {
+            // Add "Manage Course" button to course header or sidebar
+            const courseDetails = document.getElementById('courseDetails');
+            if (courseDetails) {
+                const manageButton = `
+                    <hr>
+                    <div class="mt-3">
+                        <a href="/ui/lms/course/manage?courseId=${courseId}" class="btn btn-primary w-100 mb-2">
+                            <i class="bi bi-gear"></i> Manage Course
+                        </a>
+                        <a href="/ui/lms/assignment/manage?courseId=${courseId}" class="btn btn-secondary w-100 mb-2">
+                            <i class="bi bi-file-earmark-text"></i> Manage Assignments
+                        </a>
+                        <a href="/ui/lms/course/${courseId}/announcements" class="btn btn-info w-100 mb-2">
+                            <i class="bi bi-megaphone"></i> Manage Announcements
+                        </a>
+                    </div>
+                `;
+                courseDetails.innerHTML += manageButton;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function handleDownload(event, fileUrl) {
+            event.preventDefault();
+            // Try to download the file
+            fetch(fileUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('File not found');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileUrl.split('/').pop() || 'download';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    alert('File not available. This is a sample material and the file has not been uploaded yet.');
+                });
+        }
+        
+        // Initialize page
+        if (courseId && !isNaN(courseId)) {
+            console.log('Loading course details for ID:', courseId);
+            loadCourseDetails();
+        } else {
+            console.error('No valid course ID found. URL:', window.location.pathname);
+            showError('Invalid course ID. Please go back and select a course.');
+        }
+    </script>
+</body>
+</html>

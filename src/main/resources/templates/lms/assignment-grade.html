@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Assignments - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .submission-card {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .submission-card.graded {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .submission-card.pending {
+            border-color: #ffc107;
+            background-color: #fffef8;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="mb-3">
+            <a href="/ui/lms/teacher/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+        
+        <h2>Grade Assignments</h2>
+        <div id="assignmentInfo" class="card mb-4">
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="submissionsList">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Submission Modal -->
+    <div class="modal fade" id="gradeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Grade Submission</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="gradeForm">
+                        <input type="hidden" id="gradeSubmissionId" name="submissionId">
+                        <div class="mb-3">
+                            <label class="form-label">Student</label>
+                            <input type="text" class="form-control" id="gradeStudentName" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Submitted At</label>
+                            <input type="text" class="form-control" id="gradeSubmittedAt" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Submission Content</label>
+                            <div id="gradeSubmissionContent" class="border p-3 bg-light" style="min-height: 100px; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Attachment</label>
+                            <div id="gradeAttachment"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Score *</label>
+                                <input type="number" class="form-control" id="gradeScore" name="score" min="0" required>
+                                <small class="form-text text-muted">Max Score: <span id="maxScoreDisplay">0</span></small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Percentage</label>
+                                <input type="text" class="form-control" id="gradePercentage" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Feedback</label>
+                            <textarea class="form-control" id="gradeFeedback" name="feedback" rows="4" placeholder="Enter feedback for the student..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitGrade()">Submit Grade</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const urlParams = new URLSearchParams(window.location.search);
+        const assignmentId = urlParams.get('assignmentId');
+        let assignmentData = null;
+        let maxScore = 0;
+
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        if (!assignmentId) {
+            alert('Assignment ID is required');
+            window.location.href = '/ui/lms/teacher/dashboard';
+        }
+
+        // Calculate percentage when score changes
+        document.getElementById('gradeScore').addEventListener('input', function() {
+            const score = parseFloat(this.value) || 0;
+            const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(2) : 0;
+            document.getElementById('gradePercentage').value = percentage + '%';
+        });
+
+        async function loadAssignment() {
+            try {
+                const response = await fetch(`/api/lms/assignments/${assignmentId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    assignmentData = await response.json();
+                    maxScore = assignmentData.maxScore || 100;
+                    displayAssignmentInfo(assignmentData);
+                    loadSubmissions();
+                } else {
+                    document.getElementById('assignmentInfo').innerHTML = 
+                        '<div class="alert alert-danger">Failed to load assignment</div>';
+                }
+            } catch (error) {
+                console.error('Error loading assignment:', error);
+                document.getElementById('assignmentInfo').innerHTML = 
+                    '<div class="alert alert-danger">Error loading assignment</div>';
+            }
+        }
+
+        function displayAssignmentInfo(assignment) {
+            const dueDate = new Date(assignment.dueDate);
+            document.getElementById('assignmentInfo').innerHTML = `
+                <div class="card-body">
+                    <h4>${escapeHtml(assignment.title || 'Untitled')}</h4>
+                    <p class="text-muted">${escapeHtml(assignment.description || '')}</p>
+                    <div class="mt-2">
+                        <span class="badge bg-secondary">${assignment.type || 'ESSAY'}</span>
+                        <span class="badge bg-info">Max Score: ${assignment.maxScore || 'N/A'}</span>
+                        <span class="badge bg-warning">Due: ${dueDate.toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadSubmissions() {
+            try {
+                const response = await fetch(`/api/lms/assignments/${assignmentId}/submissions`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const submissions = await response.json();
+                    displaySubmissions(submissions);
+                } else {
+                    document.getElementById('submissionsList').innerHTML = 
+                        '<div class="alert alert-warning">Failed to load submissions</div>';
+                }
+            } catch (error) {
+                console.error('Error loading submissions:', error);
+                document.getElementById('submissionsList').innerHTML = 
+                    '<div class="alert alert-danger">Error loading submissions</div>';
+            }
+        }
+
+        function displaySubmissions(submissions) {
+            if (submissions.length === 0) {
+                document.getElementById('submissionsList').innerHTML = 
+                    '<div class="alert alert-info">No submissions yet. Students can submit their assignments here.</div>';
+                return;
+            }
+
+            let html = '<h4 class="mb-3">Student Submissions (' + submissions.length + ')</h4>';
+            
+            submissions.forEach(submission => {
+                const submittedDate = new Date(submission.submittedAt);
+                const isGraded = submission.status === 'GRADED' && submission.score !== null;
+                const cardClass = isGraded ? 'graded' : 'pending';
+                const scoreDisplay = isGraded ? 
+                    `${submission.score}/${maxScore} (${((submission.score / maxScore) * 100).toFixed(1)}%)` : 
+                    'Not Graded';
+                const statusBadge = isGraded ? 
+                    '<span class="badge bg-success">Graded</span>' : 
+                    '<span class="badge bg-warning">Pending</span>';
+
+                html += `
+                    <div class="submission-card ${cardClass}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5>${escapeHtml(submission.student?.name || submission.student?.email || 'Unknown Student')}</h5>
+                                <p class="text-muted mb-2">
+                                    <strong>Submitted:</strong> ${submittedDate.toLocaleString()}
+                                    ${submission.isLate ? '<span class="badge bg-danger ms-2">Late</span>' : ''}
+                                </p>
+                                ${submission.submissionText ? `
+                                    <div class="mb-2">
+                                        <strong>Submission:</strong>
+                                        <div class="border p-2 bg-light mt-1" style="max-height: 150px; overflow-y: auto;">
+                                            ${escapeHtml(submission.submissionText)}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                ${submission.submissionFileUrl ? `
+                                    <div class="mb-2">
+                                        <strong>Attachment:</strong>
+                                        <a href="${submission.submissionFileUrl}" target="_blank" class="ms-2">
+                                            <i class="bi bi-file-earmark"></i> View File
+                                        </a>
+                                    </div>
+                                ` : ''}
+                                <div class="mt-2">
+                                    ${statusBadge}
+                                    <span class="badge bg-info ms-2">Score: ${scoreDisplay}</span>
+                                    ${isGraded && submission.gradedAt ? `
+                                        <span class="badge bg-secondary ms-2">
+                                            Graded: ${new Date(submission.gradedAt).toLocaleString()}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                ${submission.feedback ? `
+                                    <div class="mt-2">
+                                        <strong>Feedback:</strong>
+                                        <div class="border p-2 bg-light mt-1">${escapeHtml(submission.feedback)}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary" onclick="openGradeModal(${submission.id}, '${escapeHtml(submission.student?.name || submission.student?.email || 'Unknown')}', ${JSON.stringify(submission).replace(/"/g, '&quot;')})">
+                                    ${isGraded ? '<i class="bi bi-pencil"></i> Update Grade' : '<i class="bi bi-check-circle"></i> Grade'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('submissionsList').innerHTML = html;
+        }
+
+        function openGradeModal(submissionId, studentName, submission) {
+            document.getElementById('gradeSubmissionId').value = submissionId;
+            document.getElementById('gradeStudentName').value = studentName;
+            document.getElementById('gradeSubmittedAt').value = new Date(submission.submittedAt).toLocaleString();
+            document.getElementById('gradeSubmissionContent').textContent = submission.submissionText || 'No text submission';
+            document.getElementById('maxScoreDisplay').textContent = maxScore;
+            document.getElementById('gradeScore').value = submission.score || '';
+            document.getElementById('gradeScore').max = maxScore;
+            document.getElementById('gradeFeedback').value = submission.feedback || '';
+            
+            // Calculate percentage
+            const score = parseFloat(submission.score) || 0;
+            const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(2) : 0;
+            document.getElementById('gradePercentage').value = percentage + '%';
+            
+            // Display attachment
+            if (submission.submissionFileUrl) {
+                document.getElementById('gradeAttachment').innerHTML = `
+                    <a href="${submission.submissionFileUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-file-earmark"></i> View Attachment
+                    </a>
+                `;
+            } else {
+                document.getElementById('gradeAttachment').innerHTML = '<span class="text-muted">No attachment</span>';
+            }
+            
+            new bootstrap.Modal(document.getElementById('gradeModal')).show();
+        }
+
+        async function submitGrade() {
+            const form = document.getElementById('gradeForm');
+            const submissionId = document.getElementById('gradeSubmissionId').value;
+            const score = parseInt(document.getElementById('gradeScore').value);
+            const feedback = document.getElementById('gradeFeedback').value;
+
+            if (!score && score !== 0) {
+                alert('Please enter a score');
+                return;
+            }
+
+            if (score < 0 || score > maxScore) {
+                alert(`Score must be between 0 and ${maxScore}`);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/lms/assignments/submissions/${submissionId}/grade`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        score: score,
+                        feedback: feedback
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Grade submitted successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('gradeModal')).hide();
+                    loadSubmissions();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to submit grade'));
+                }
+            } catch (error) {
+                console.error('Error submitting grade:', error);
+                alert('Failed to submit grade');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        // Load data on page load
+        loadAssignment();
+    </script>
+</body>
+</html>
+

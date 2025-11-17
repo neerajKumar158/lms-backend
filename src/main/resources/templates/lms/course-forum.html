@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Forum - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .thread-card {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .thread-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .thread-card.pinned {
+            border-left: 4px solid #ffc107;
+            background: #fffbf0;
+        }
+        .thread-card.locked {
+            opacity: 0.7;
+        }
+        .post-card {
+            border-left: 3px solid #007bff;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .reply-card {
+            border-left: 3px solid #6c757d;
+            padding: 15px;
+            margin-left: 40px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row">
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div id="courseInfo" class="mb-4"></div>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Course Forum</h2>
+            <button class="btn btn-primary" onclick="showThreadModal()" id="createThreadBtn" style="display: none;">
+                Create Thread
+            </button>
+        </div>
+
+        <div id="threadsList"></div>
+    </div>
+
+    <!-- Thread Detail Modal -->
+    <div class="modal fade" id="threadModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="threadModalTitle">Thread</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="threadModalBody">
+                    <div id="threadContent"></div>
+                    <hr>
+                    <h6>Posts</h6>
+                    <div id="postsList"></div>
+                    <div id="replySection" style="display: none;">
+                        <hr>
+                        <h6>Reply</h6>
+                        <textarea class="form-control mb-2" id="replyContent" rows="3" placeholder="Write your reply..."></textarea>
+                        <button class="btn btn-primary" onclick="submitReply()">Post Reply</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Thread Modal -->
+    <div class="modal fade" id="createThreadModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Thread</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="threadForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content *</label>
+                            <textarea class="form-control" name="content" rows="5" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createThread()">Create Thread</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const courseId = /*[[${courseId}]]*/ null;
+        let currentThreadId = null;
+        let isInstructor = false;
+
+        async function checkAccess() {
+            if (!token || !courseId) return;
+            
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const course = await response.json();
+                    // Show create button if user is logged in
+                    if (token) {
+                        document.getElementById('createThreadBtn').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking access:', error);
+            }
+        }
+
+        async function loadCourseInfo() {
+            if (!courseId) return;
+            
+            try {
+                const response = await fetch(`/api/lms/courses/${courseId}`);
+                if (response.ok) {
+                    const course = await response.json();
+                    document.getElementById('courseInfo').innerHTML = `
+                        <div class="card">
+                            <div class="card-body">
+                                <h3>${escapeHtml(course.title || 'Course')}</h3>
+                                <p class="text-muted">${escapeHtml(course.description || '')}</p>
+                                <a href="/ui/lms/course/${courseId}" class="btn btn-outline-primary">View Course</a>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading course:', error);
+            }
+        }
+
+        async function loadThreads() {
+            if (!courseId) return;
+
+            try {
+                const response = await fetch(`/api/lms/forum/course/${courseId}/threads`, {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                });
+                
+                if (response.ok) {
+                    const threads = await response.json();
+                    displayThreads(threads);
+                } else {
+                    document.getElementById('threadsList').innerHTML = 
+                        '<div class="alert alert-warning">Failed to load threads</div>';
+                }
+            } catch (error) {
+                console.error('Error loading threads:', error);
+                document.getElementById('threadsList').innerHTML = 
+                    '<div class="alert alert-danger">Error loading threads</div>';
+            }
+        }
+
+        function displayThreads(threads) {
+            if (!threads || threads.length === 0) {
+                document.getElementById('threadsList').innerHTML = 
+                    '<div class="alert alert-info">No threads yet. Be the first to start a discussion!</div>';
+                return;
+            }
+
+            let html = '';
+            threads.forEach(thread => {
+                const createdDate = new Date(thread.createdAt).toLocaleDateString();
+                const lastActivity = new Date(thread.lastActivityAt).toLocaleDateString();
+                const postCount = thread.postCount || 0;
+                
+                html += `
+                    <div class="thread-card ${thread.isPinned ? 'pinned' : ''} ${thread.isLocked ? 'locked' : ''}" 
+                         onclick="viewThread(${thread.id})">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    ${thread.isPinned ? '<span class="badge bg-warning me-2">Pinned</span>' : ''}
+                                    ${thread.isLocked ? '<span class="badge bg-secondary me-2">Locked</span>' : ''}
+                                    <h5 class="mb-0">${escapeHtml(thread.title || 'Untitled')}</h5>
+                                </div>
+                                <p class="text-muted small mb-2">
+                                    By ${escapeHtml(thread.author?.name || thread.author?.email || 'Anonymous')} 
+                                    on ${createdDate}
+                                </p>
+                                <p class="mb-0">${escapeHtml(thread.content?.substring(0, 150) || '')}${thread.content?.length > 150 ? '...' : ''}</p>
+                            </div>
+                            <div class="text-end ms-3">
+                                <div class="text-muted small">
+                                    <div>${postCount} ${postCount === 1 ? 'post' : 'posts'}</div>
+                                    <div>${thread.viewCount || 0} views</div>
+                                    <div>Last: ${lastActivity}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('threadsList').innerHTML = html;
+        }
+
+        async function viewThread(threadId) {
+            currentThreadId = threadId;
+            
+            try {
+                const response = await fetch(`/api/lms/forum/threads/${threadId}`, {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                });
+                
+                if (response.ok) {
+                    const thread = await response.json();
+                    displayThread(thread);
+                    
+                    // Load posts
+                    const postsResponse = await fetch(`/api/lms/forum/threads/${threadId}/posts`, {
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                    });
+                    
+                    if (postsResponse.ok) {
+                        const posts = await postsResponse.json();
+                        displayPosts(posts, thread.isLocked);
+                    }
+                    
+                    new bootstrap.Modal(document.getElementById('threadModal')).show();
+                }
+            } catch (error) {
+                console.error('Error loading thread:', error);
+                alert('Failed to load thread');
+            }
+        }
+
+        function displayThread(thread) {
+            document.getElementById('threadModalTitle').textContent = escapeHtml(thread.title || 'Thread');
+            document.getElementById('threadContent').innerHTML = `
+                <div class="post-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>${escapeHtml(thread.author?.name || thread.author?.email || 'Anonymous')}</strong>
+                            <span class="text-muted small ms-2">${new Date(thread.createdAt).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <p>${escapeHtml(thread.content || '')}</p>
+                </div>
+            `;
+        }
+
+        function displayPosts(posts, isLocked) {
+            if (!posts || posts.length === 0) {
+                document.getElementById('postsList').innerHTML = 
+                    '<div class="alert alert-info">No replies yet.</div>';
+                document.getElementById('replySection').style.display = isLocked || !token ? 'none' : 'block';
+                return;
+            }
+
+            let html = '';
+            posts.forEach(post => {
+                html += `
+                    <div class="post-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>${escapeHtml(post.author?.name || post.author?.email || 'Anonymous')}</strong>
+                                <span class="text-muted small ms-2">${new Date(post.createdAt).toLocaleString()}</span>
+                                ${post.isEdited ? '<span class="badge bg-secondary ms-2">Edited</span>' : ''}
+                            </div>
+                        </div>
+                        <p>${escapeHtml(post.content || '')}</p>
+                        ${!isLocked && token ? `
+                            <button class="btn btn-sm btn-outline-primary" onclick="replyToPost(${post.id})">
+                                Reply
+                            </button>
+                        ` : ''}
+                        <div id="replies_${post.id}"></div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('postsList').innerHTML = html;
+            document.getElementById('replySection').style.display = isLocked || !token ? 'none' : 'block';
+            
+            // Load replies for each post
+            posts.forEach(post => {
+                loadReplies(post.id);
+            });
+        }
+
+        async function loadReplies(postId) {
+            try {
+                const response = await fetch(`/api/lms/forum/posts/${postId}/replies`, {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                });
+                
+                if (response.ok) {
+                    const replies = await response.json();
+                    if (replies && replies.length > 0) {
+                        displayReplies(postId, replies);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading replies:', error);
+            }
+        }
+
+        function displayReplies(postId, replies) {
+            let html = '';
+            replies.forEach(reply => {
+                html += `
+                    <div class="reply-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>${escapeHtml(reply.author?.name || reply.author?.email || 'Anonymous')}</strong>
+                                <span class="text-muted small ms-2">${new Date(reply.createdAt).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <p>${escapeHtml(reply.content || '')}</p>
+                    </div>
+                `;
+            });
+            document.getElementById(`replies_${postId}`).innerHTML = html;
+        }
+
+        function replyToPost(postId) {
+            // Simple implementation - reply to thread
+            document.getElementById('replyContent').focus();
+        }
+
+        function showThreadModal() {
+            if (!token) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+            
+            document.getElementById('threadForm').reset();
+            new bootstrap.Modal(document.getElementById('createThreadModal')).show();
+        }
+
+        async function createThread() {
+            if (!token) {
+                alert('Please login to create threads');
+                return;
+            }
+
+            const form = document.getElementById('threadForm');
+            const formData = new FormData(form);
+
+            if (!formData.get('title') || !formData.get('content')) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const threadData = {
+                title: formData.get('title'),
+                content: formData.get('content')
+            };
+
+            try {
+                const response = await fetch(`/api/lms/forum/course/${courseId}/threads`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(threadData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Thread created successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('createThreadModal')).hide();
+                    loadThreads();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to create thread'));
+                }
+            } catch (error) {
+                console.error('Error creating thread:', error);
+                alert('Failed to create thread');
+            }
+        }
+
+        async function submitReply() {
+            if (!token) {
+                alert('Please login to post replies');
+                return;
+            }
+
+            const content = document.getElementById('replyContent').value.trim();
+            if (!content) {
+                alert('Please enter a reply');
+                return;
+            }
+
+            const postData = {
+                content: content,
+                parentPostId: null
+            };
+
+            try {
+                const response = await fetch(`/api/lms/forum/threads/${currentThreadId}/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('replyContent').value = '';
+                    // Reload thread to show new post
+                    viewThread(currentThreadId);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to post reply'));
+                }
+            } catch (error) {
+                console.error('Error posting reply:', error);
+                alert('Failed to post reply');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load on page load
+        loadCourseInfo();
+        loadThreads();
+        checkAccess();
+    </script>
+</body>
+</html>
+

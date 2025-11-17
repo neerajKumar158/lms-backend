@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Quiz - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .math-keyboard {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .math-keyboard .btn {
+            margin: 2px;
+            min-width: 40px;
+            font-size: 0.9rem;
+        }
+        .math-keyboard .btn-group {
+            margin: 2px;
+        }
+        .math-keyboard-section {
+            margin-bottom: 10px;
+        }
+        .math-keyboard-section-title {
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: #495057;
+        }
+        .floating-math-keyboard-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1060;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .floating-math-keyboard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            max-width: 90vw;
+            max-height: 70vh;
+            z-index: 1060;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .floating-math-keyboard .card-header {
+            cursor: move;
+            user-select: none;
+            background-color: #f8f9fa;
+        }
+        .floating-math-keyboard .card-header:hover {
+            background-color: #e9ecef;
+        }
+        @media (max-width: 768px) {
+            .floating-math-keyboard {
+                width: 95vw;
+            }
+        }
+    </style>
+    <!-- MathJax for rendering mathematical notation -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script th:inline="none">
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="mb-3">
+            <a href="/ui/lms/teacher/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="/ui/lms" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-house"></i> Home
+            </a>
+        </div>
+        <h2>Manage Quiz</h2>
+        <div id="quizInfo" class="mb-4"></div>
+        
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Questions</h5>
+                <button class="btn btn-primary btn-sm" onclick="showAddQuestionModal()">Add Question</button>
+            </div>
+            <div class="card-body">
+                <div id="questionsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Question Modal -->
+    <div class="modal fade" id="addQuestionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Question</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addQuestionForm">
+                        <div class="mb-3">
+                            <label class="form-label">Question Text *</label>
+                            <textarea id="questionText" class="form-control tex2jax_process math-input-field" name="questionText" rows="3" required placeholder="Enter your question here. Use the floating Math Keyboard button (bottom right) to insert math symbols."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Question Type *</label>
+                            <select class="form-select" name="type" id="questionType" required onchange="toggleOptions()">
+                                <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                                <option value="TRUE_FALSE">True/False</option>
+                                <option value="SHORT_ANSWER">Short Answer</option>
+                                <option value="ESSAY">Essay</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Points *</label>
+                            <input type="number" class="form-control" name="marks" value="1" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Order Index</label>
+                            <input type="number" class="form-control" name="orderIndex" value="0">
+                        </div>
+                        <div id="optionsSection" style="display: none;">
+                            <label class="form-label">Options *</label>
+                            <div id="optionsContainer">
+                                <!-- Options will be added here dynamically -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addOption()">Add Option</button>
+                            <small class="form-text text-muted d-block mt-1">Mark at least one option as correct. Use Math Keyboard button on each option to insert math symbols.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Explanation</label>
+                            <textarea class="form-control" name="explanation" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addQuestion()">Add Question</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Math Keyboard Button (outside modal, always accessible) -->
+    <button id="floatingMathKeyboardBtn" class="btn btn-primary btn-lg floating-math-keyboard-btn" onclick="toggleFloatingMathKeyboard()" title="Math Keyboard - Click to insert math symbols">
+        <i class="bi bi-calculator"></i> Math
+    </button>
+
+    <!-- Floating Math Keyboard Panel -->
+    <div id="floatingMathKeyboard" class="card floating-math-keyboard">
+        <div class="card-header d-flex justify-content-between align-items-center" id="mathKeyboardHeader">
+            <h6 class="mb-0"><i class="bi bi-arrows-move"></i> Math Keyboard (Drag to move)</h6>
+            <button type="button" class="btn-close" onclick="toggleFloatingMathKeyboard()"></button>
+        </div>
+        <div class="card-body p-2">
+            <div id="floatingMathKeyboardContent" class="math-keyboard"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const quizId = new URLSearchParams(window.location.search).get('id');
+        let quizData = null;
+        let optionCount = 1;
+
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        async function loadQuiz() {
+            if (!quizId) {
+                alert('Quiz ID not provided');
+                window.location.href = '/ui/lms/teacher/dashboard';
+                return;
+            }
+
+            try {
+                // Load quiz details
+                const quizResponse = await fetch(`/api/lms/quizzes/${quizId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!quizResponse.ok) {
+                    throw new Error('Failed to load quiz');
+                }
+                
+                quizData = await quizResponse.json();
+                
+                // Load questions separately
+                const questionsResponse = await fetch(`/api/lms/quizzes/${quizId}/questions`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (questionsResponse.ok) {
+                    const questions = await questionsResponse.json();
+                    console.log('Loaded questions:', questions); // Debug log
+                    quizData.questions = questions;
+                } else {
+                    console.warn('Failed to load questions:', questionsResponse.status);
+                    quizData.questions = [];
+                }
+                
+                displayQuiz(quizData);
+            } catch (error) {
+                console.error('Error loading quiz:', error);
+                alert('Error loading quiz');
+            }
+        }
+
+        function displayQuiz(quiz) {
+            document.getElementById('quizInfo').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h4>${escapeHtml(quiz.title || 'Quiz')}</h4>
+                                <p>${escapeHtml(quiz.description || '')}</p>
+                                <p><strong>Total Marks:</strong> ${quiz.totalMarks || 0}</p>
+                                <p><strong>Passing Marks:</strong> ${quiz.passingMarks || 0}</p>
+                                <p><strong>Duration:</strong> ${quiz.durationMinutes || 'N/A'} minutes</p>
+                            </div>
+                            <div>
+                                <a href="/ui/lms/teacher/dashboard" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const questions = quiz.questions || [];
+            console.log('Displaying questions:', questions); // Debug log
+            
+            if (questions.length === 0) {
+                document.getElementById('questionsList').innerHTML = 
+                    '<div class="alert alert-info">No questions yet. Add your first question!</div>';
+                return;
+            }
+            
+            let html = '';
+            questions.forEach((question, index) => {
+                const questionNumber = (question.orderIndex !== null && question.orderIndex !== undefined) ? question.orderIndex + 1 : index + 1;
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>Question ${questionNumber} (${question.type || 'MULTIPLE_CHOICE'}) - ${question.marks || 1} points</h6>
+                                    <div class="tex2jax_process">${escapeHtml(question.questionText || '')}</div>
+                                    ${displayQuestionOptions(question)}
+                                    ${question.explanation ? `<div class="text-muted small mt-2 tex2jax_process"><strong>Explanation:</strong> ${escapeHtml(question.explanation)}</div>` : ''}
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteQuestion(${question.id})">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('questionsList').innerHTML = html;
+            // Re-render MathJax after content is loaded
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([document.getElementById('questionsList')]).catch(function (err) {
+                    console.error('MathJax rendering error:', err);
+                });
+            }
+        }
+
+        function displayQuestionOptions(question) {
+            if (question.options && question.options.length > 0) {
+                let html = '<ul class="list-unstyled ms-3 mt-2">';
+                question.options.forEach((option, idx) => {
+                    html += `<li class="mb-1">
+                        ${option.isCorrect ? '<span class="badge bg-success me-2">Correct</span>' : ''}
+                        ${idx + 1}. <span class="tex2jax_process">${escapeHtml(option.optionText || '')}</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                return html;
+            }
+            return '';
+        }
+
+        function toggleOptions() {
+            const type = document.getElementById('questionType').value;
+            const optionsSection = document.getElementById('optionsSection');
+            const optionsContainer = document.getElementById('optionsContainer');
+            
+            if (type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE') {
+                optionsSection.style.display = 'block';
+                // Add initial options if container is empty
+                if (optionsContainer.children.length === 0) {
+                    if (type === 'TRUE_FALSE') {
+                        // Pre-add True and False options
+                        addOptionWithText('True');
+                        addOptionWithText('False');
+                    } else {
+                        // Add at least 2 options for multiple choice
+                        addOption();
+                        addOption();
+                    }
+                }
+            } else {
+                optionsSection.style.display = 'none';
+                optionsContainer.innerHTML = '';
+            }
+        }
+        
+        function addOptionWithText(text) {
+            const container = document.getElementById('optionsContainer');
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            const inputId = `option_${optionCount}`;
+            div.innerHTML = `
+                <div class="input-group">
+                    <input type="text" id="${inputId}" class="form-control math-input-field" placeholder="Option text" value="${escapeHtml(text)}" name="option_${optionCount}">
+                    <div class="input-group-text">
+                        <input type="radio" name="correctOption" value="${optionCount}" class="form-check-input">
+                        <label class="form-check-label ms-2">Correct</label>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">Remove</button>
+                </div>
+            `;
+            container.appendChild(div);
+            optionCount++;
+        }
+
+        function addOption() {
+            const container = document.getElementById('optionsContainer');
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            const inputId = `option_${optionCount}`;
+            div.innerHTML = `
+                <div class="input-group">
+                    <input type="text" id="${inputId}" class="form-control math-input-field" placeholder="Option text" name="option_${optionCount}">
+                    <div class="input-group-text">
+                        <input type="radio" name="correctOption" value="${optionCount}" class="form-check-input">
+                        <label class="form-check-label ms-2">Correct</label>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">Remove</button>
+                </div>
+            `;
+            container.appendChild(div);
+            optionCount++;
+        }
+
+        function showAddQuestionModal() {
+            document.getElementById('addQuestionForm').reset();
+            document.getElementById('optionsContainer').innerHTML = '';
+            optionCount = 1;
+            toggleOptions();
+            new bootstrap.Modal(document.getElementById('addQuestionModal')).show();
+            // Reset focused field when modal opens
+            setTimeout(() => {
+                const questionField = document.getElementById('questionText');
+                if (questionField) {
+                    questionField.focus();
+                    currentFocusedField = 'questionText';
+                }
+            }, 300);
+        }
+
+        async function addQuestion() {
+            const form = document.getElementById('addQuestionForm');
+            const formData = new FormData(form);
+            
+            if (!formData.get('questionText') || !formData.get('type')) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Collect options if multiple choice
+            const options = [];
+            if (formData.get('type') === 'MULTIPLE_CHOICE' || formData.get('type') === 'TRUE_FALSE') {
+                const optionInputs = document.querySelectorAll('#optionsContainer input[type="text"]');
+                const correctOption = formData.get('correctOption');
+                
+                if (optionInputs.length === 0) {
+                    alert('Please add at least one option for multiple choice or true/false questions');
+                    return;
+                }
+                
+                let optionIndex = 0;
+                optionInputs.forEach((input) => {
+                    if (input.value.trim()) {
+                        // Extract the option number from the input name (e.g., "option_1" -> 1)
+                        const optionNum = input.name.split('_')[1];
+                        options.push({
+                            optionText: input.value.trim(),
+                            isCorrect: correctOption === optionNum,
+                            orderIndex: optionIndex++
+                        });
+                    }
+                });
+                
+                if (options.length === 0) {
+                    alert('Please add at least one option');
+                    return;
+                }
+                
+                // Check if at least one option is marked as correct
+                const hasCorrectOption = options.some(opt => opt.isCorrect);
+                if (!hasCorrectOption) {
+                    alert('Please mark at least one option as correct');
+                    return;
+                }
+            }
+            
+            const questionData = {
+                questionText: formData.get('questionText'),
+                type: formData.get('type'),
+                marks: formData.get('marks') ? parseInt(formData.get('marks')) : 1,
+                orderIndex: formData.get('orderIndex') ? parseInt(formData.get('orderIndex')) : 0,
+                correctAnswer: formData.get('correctAnswer') || null,
+                explanation: formData.get('explanation') || null,
+                options: options.length > 0 ? options : null
+            };
+
+            try {
+                const response = await fetch(`/api/lms/quizzes/${quizId}/questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(questionData)
+                });
+
+                let result;
+                try {
+                    const responseText = await response.text();
+                    if (!responseText) {
+                        throw new Error('Empty response from server');
+                    }
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    if (response.ok) {
+                        result = { message: 'Question added successfully' };
+                    } else {
+                        throw new Error('Server error: ' + response.status + ' ' + response.statusText);
+                    }
+                }
+                
+                if (response.ok) {
+                    console.log('Question added successfully:', result); // Debug log
+                    alert('Question added successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addQuestionModal')).hide();
+                    form.reset();
+                    document.getElementById('optionsContainer').innerHTML = '';
+                    optionCount = 1;
+                    // Wait a bit before reloading to ensure the question is saved
+                    setTimeout(() => {
+                        loadQuiz(); // Reload quiz to show new question
+                    }, 300);
+                } else {
+                    console.error('Failed to add question:', result);
+                    alert('Error: ' + (result.error || 'Failed to add question'));
+                }
+            } catch (error) {
+                console.error('Error adding question:', error);
+                alert('Failed to add question');
+            }
+        }
+
+        async function deleteQuestion(questionId) {
+            if (!confirm('Are you sure you want to delete this question?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/lms/quizzes/${quizId}/questions/${questionId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                let result;
+                const responseText = await response.text();
+                
+                try {
+                    result = responseText ? JSON.parse(responseText) : {};
+                } catch (parseError) {
+                    console.error('Failed to parse response:', parseError);
+                    if (response.ok) {
+                        result = { message: 'Question deleted successfully' };
+                    } else {
+                        // Check if it's an HTML error page
+                        if (responseText.includes('<html>') || responseText.includes('Access Denied')) {
+                            throw new Error('Access Denied: You don\'t have permission to delete this question.');
+                        }
+                        throw new Error('Failed to delete question. Server returned: ' + response.status + ' ' + response.statusText);
+                    }
+                }
+                
+                if (response.ok) {
+                    alert('Question deleted successfully!');
+                    loadQuiz(); // Reload quiz to reflect deletion
+                } else {
+                    const errorMsg = result.error || result.message || 'Failed to delete question';
+                    alert('Error: ' + errorMsg);
+                    console.error('Delete question error:', result);
+                }
+            } catch (error) {
+                console.error('Error deleting question:', error);
+                alert('Failed to delete question: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        // Math Keyboard Functions
+        function insertAtCursor(element, text) {
+            if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                const start = element.selectionStart;
+                const end = element.selectionEnd;
+                const value = element.value;
+                element.value = value.substring(0, start) + text + value.substring(end);
+                element.selectionStart = element.selectionEnd = start + text.length;
+                element.focus();
+            }
+        }
+
+        function createMathKeyboard(keyboardId, targetId) {
+            const keyboard = document.getElementById(keyboardId);
+            if (!keyboard) return;
+            
+            // Use a generic function that works with currently focused field
+            keyboard.innerHTML = `
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Trigonometry</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\sin\\\\theta$')">sin θ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\cos\\\\theta$')">cos θ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\tan\\\\theta$')">tan θ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\theta$')">θ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\alpha$')">α</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\beta$')">β</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\gamma$')">γ</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Special Math Symbols</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\times$')">×</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\div$')">÷</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\neq$')">≠</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\leq$')">≤</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\geq$')">≥</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\pm$')">±</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\approx$')">≈</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\infty$')">∞</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Squares & Powers (Dedicated Section)</div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^2$')">x²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^3$')">x³</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^4$')">x⁴</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^5$')">x⁵</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^n$')">xⁿ</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$a^2$')">a²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$a^3$')">a³</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$a^4$')">a⁴</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$b^2$')">b²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$b^3$')">b³</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$b^4$')">b⁴</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$y^2$')">y²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$y^3$')">y³</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$y^4$')">y⁴</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^2 + y^2$')">x² + y²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$a^2 + b^2 = c^2$')">a² + b² = c²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$(x+y)^2$')">(x+y)²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$(x-y)^2$')">(x-y)²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^2 - y^2$')">x² - y²</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertMath(null, '$x^2 + 2xy + y^2$')">x² + 2xy + y²</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Custom Powers (Insert Template)</div>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'a')">a^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'b')">b^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'x')">x^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'y')">y^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'z')">z^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'n')">n^</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="insertPowerTemplate(null, 'm')">m^</button>
+                    <small class="text-muted d-block mt-1">Click to insert template, then type the power number (e.g., a^3, x^4)</small>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Square Roots & Radicals</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt{x}$')">√x</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt[2]{x}$')">²√x</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt[3]{x}$')">∛x</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt[4]{x}$')">⁴√x</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt{n}$')">√n</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt{a^2 + b^2}$')">√(a² + b²)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt{x^2 + y^2}$')">√(x² + y²)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\sqrt{x^2}$')">√(x²)</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Subscripts</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$x_2$')">x₂</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$x_{n}$')">xₙ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$x_{i}$')">xᵢ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$a_1$')">a₁</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$b_2$')">b₂</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Fractions</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\frac{a}{b}$')">a/b</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\frac{1}{2}$')">½</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\frac{x+1}{x-1}$')">(x+1)/(x-1)</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Chemistry</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$H_2SO_4$')">H₂SO₄</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$CO_2$')">CO₂</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$H_2O$')">H₂O</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$NaCl$')">NaCl</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Calculus</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\int$')">∫</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\sum$')">Σ</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\lim$')">lim</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMath(null, '$\\\\frac{d}{dx}$')">d/dx</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Quadratic Equations</div>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$ax^2 + bx + c = 0$')">ax² + bx + c = 0</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 + 2x + 1 = 0$')">x² + 2x + 1 = 0</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 - 4 = 0$')">x² - 4 = 0</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 = 4$')">x² = 4</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x = \\pm 2$')">x = ±2</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$')">Quadratic Formula</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 + px + q = 0$')">x² + px + q = 0</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Common Square Equations</div>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 = a$')">x² = a</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 + y^2 = r^2$')">x² + y² = r²</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$a^2 - b^2 = (a+b)(a-b)$')">a² - b² = (a+b)(a-b)</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$(a+b)^2 = a^2 + 2ab + b^2$')">(a+b)² = a² + 2ab + b²</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$(a-b)^2 = a^2 - 2ab + b^2$')">(a-b)² = a² - 2ab + b²</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="insertMath(null, '$x^2 - y^2 = (x+y)(x-y)$')">x² - y² = (x+y)(x-y)</button>
+                </div>
+                <div class="math-keyboard-section">
+                    <div class="math-keyboard-section-title">Math Wrapper</div>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="wrapMath(null)">Wrap with $...$</button>
+                    <small class="text-muted d-block mt-1">Select text and click to wrap it in math notation</small>
+                </div>
+            `;
+        }
+
+        let currentFocusedField = null;
+
+        // Drag functionality for math keyboard
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        function loadKeyboardPosition() {
+            const savedPosition = localStorage.getItem('mathKeyboardPosition');
+            if (savedPosition) {
+                const pos = JSON.parse(savedPosition);
+                xOffset = pos.x || 0;
+                yOffset = pos.y || 0;
+                const keyboard = document.getElementById('floatingMathKeyboard');
+                if (keyboard) {
+                    keyboard.style.transform = `translate(calc(-50% + ${xOffset}px), calc(-50% + ${yOffset}px))`;
+                }
+            }
+        }
+
+        function saveKeyboardPosition() {
+            localStorage.setItem('mathKeyboardPosition', JSON.stringify({ x: xOffset, y: yOffset }));
+        }
+
+        function dragStart(e) {
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            if (e.target.closest('.btn-close')) {
+                return;
+            }
+
+            if (e.target.closest('#mathKeyboardHeader')) {
+                isDragging = true;
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+            saveKeyboardPosition();
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                const keyboard = document.getElementById('floatingMathKeyboard');
+                if (keyboard) {
+                    keyboard.style.transform = `translate(calc(-50% + ${xOffset}px), calc(-50% + ${yOffset}px))`;
+                }
+            }
+        }
+
+        function toggleFloatingMathKeyboard() {
+            const keyboard = document.getElementById('floatingMathKeyboard');
+            const keyboardContent = document.getElementById('floatingMathKeyboardContent');
+            
+            if (keyboard.style.display === 'none' || keyboard.style.display === '') {
+                // Get the currently focused field or the first math input field
+                if (!currentFocusedField) {
+                    const firstField = document.querySelector('.math-input-field');
+                    if (firstField) {
+                        currentFocusedField = firstField.id;
+                    } else {
+                        alert('Please click on a question or option field first, then use the Math Keyboard.');
+                        return;
+                    }
+                }
+                
+                // Load saved position
+                loadKeyboardPosition();
+                
+                // Create keyboard content
+                if (!keyboardContent.innerHTML.trim()) {
+                    createMathKeyboard('floatingMathKeyboardContent', currentFocusedField);
+                } else {
+                    // Update keyboard to use current focused field
+                    createMathKeyboard('floatingMathKeyboardContent', currentFocusedField);
+                }
+                
+                keyboard.style.display = 'block';
+            } else {
+                keyboard.style.display = 'none';
+            }
+        }
+
+        // Initialize drag functionality and focus tracking when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Track focused math input fields
+            document.addEventListener('focusin', function(e) {
+                if (e.target.classList.contains('math-input-field')) {
+                    currentFocusedField = e.target.id;
+                }
+            });
+            
+            // Initialize drag functionality for math keyboard
+            const keyboard = document.getElementById('floatingMathKeyboard');
+            const header = document.getElementById('mathKeyboardHeader');
+            
+            if (keyboard && header) {
+                loadKeyboardPosition();
+                
+                header.addEventListener('mousedown', dragStart);
+                header.addEventListener('touchstart', dragStart);
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag);
+                
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
+            }
+        });
+
+        function toggleMathKeyboard(targetId) {
+            // This function is kept for backward compatibility but redirects to floating keyboard
+            currentFocusedField = targetId;
+            const element = document.getElementById(targetId);
+            if (element) {
+                element.focus();
+            }
+            toggleFloatingMathKeyboard();
+        }
+
+        function insertMath(targetId, text) {
+            // Use current focused field if targetId is not provided
+            const fieldId = targetId || currentFocusedField;
+            const element = document.getElementById(fieldId);
+            if (element) {
+                insertAtCursor(element, text);
+                element.focus(); // Refocus after insertion
+            } else {
+                console.error('Target element not found:', fieldId);
+                // Try to find any focused math input field
+                const focused = document.activeElement;
+                if (focused && focused.classList.contains('math-input-field')) {
+                    insertAtCursor(focused, text);
+                    focused.focus();
+                } else {
+                    alert('Please click on a question or option field first.');
+                }
+            }
+        }
+
+        function insertPowerTemplate(targetId, variable) {
+            // Use current focused field if targetId is not provided
+            const fieldId = targetId || currentFocusedField;
+            const element = document.getElementById(fieldId);
+            if (!element) {
+                // Try to find any focused math input field
+                const focused = document.activeElement;
+                if (focused && focused.classList.contains('math-input-field')) {
+                    const template = `$${variable}^{}$`;
+                    insertAtCursor(focused, template);
+                    const start = focused.selectionStart;
+                    focused.selectionStart = start - 2;
+                    focused.selectionEnd = start - 2;
+                    focused.focus();
+                    return;
+                }
+                console.error('Target element not found:', fieldId);
+                alert('Please click on a question or option field first.');
+                return;
+            }
+            
+            // Insert the variable with caret, wrapped in math notation
+            // User can then type the number after the caret
+            const template = `$${variable}^{}$`;
+            insertAtCursor(element, template);
+            
+            // Position cursor after the caret (inside the braces)
+            const start = element.selectionStart;
+            // Move cursor to after the opening brace
+            element.selectionStart = start - 2; // Position after ^{
+            element.selectionEnd = start - 2;
+            element.focus();
+        }
+
+        function wrapMath(targetId) {
+            // Use current focused field if targetId is not provided
+            const fieldId = targetId || currentFocusedField;
+            const element = document.getElementById(fieldId);
+            if (!element) {
+                // Try to find any focused math input field
+                const focused = document.activeElement;
+                if (focused && focused.classList.contains('math-input-field')) {
+                    const start = focused.selectionStart;
+                    const end = focused.selectionEnd;
+                    const selectedText = focused.value.substring(start, end);
+                    
+                    if (selectedText) {
+                        if (selectedText.startsWith('$') && selectedText.endsWith('$')) {
+                            const unwrapped = selectedText.slice(1, -1);
+                            focused.value = focused.value.substring(0, start) + unwrapped + focused.value.substring(end);
+                            focused.selectionStart = start;
+                            focused.selectionEnd = start + unwrapped.length;
+                        } else {
+                            const wrapped = '$' + selectedText + '$';
+                            focused.value = focused.value.substring(0, start) + wrapped + focused.value.substring(end);
+                            focused.selectionStart = start;
+                            focused.selectionEnd = start + wrapped.length;
+                        }
+                        focused.focus();
+                    } else {
+                        insertAtCursor(focused, '$$');
+                        focused.selectionStart = focused.selectionStart - 1;
+                        focused.focus();
+                    }
+                    return;
+                }
+                console.error('Target element not found:', fieldId);
+                alert('Please click on a question or option field first.');
+                return;
+            }
+            
+            const start = element.selectionStart;
+            const end = element.selectionEnd;
+            const selectedText = element.value.substring(start, end);
+            
+            if (selectedText) {
+                // Check if already wrapped
+                if (selectedText.startsWith('$') && selectedText.endsWith('$')) {
+                    // Remove wrapper
+                    const unwrapped = selectedText.slice(1, -1);
+                    element.value = element.value.substring(0, start) + unwrapped + element.value.substring(end);
+                    element.selectionStart = start;
+                    element.selectionEnd = start + unwrapped.length;
+                } else {
+                    // Add wrapper
+                    const wrapped = '$' + selectedText + '$';
+                    element.value = element.value.substring(0, start) + wrapped + element.value.substring(end);
+                    element.selectionStart = start;
+                    element.selectionEnd = start + wrapped.length;
+                }
+                element.focus();
+            } else {
+                // No selection, just insert wrapper
+                insertAtCursor(element, '$$');
+                element.selectionStart = element.selectionStart - 1;
+                element.focus();
+            }
+        }
+
+        loadQuiz();
+    </script>
+</body>
+</html>
+

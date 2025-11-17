@@ -1,0 +1,74 @@
+server:
+  port: 9192
+
+spring:
+  application:
+    name: lms-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/lms_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8
+    driverClassName: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: false
+        enable_lazy_load_no_trans: false  # Prevent lazy loading outside transaction
+        dialect: org.hibernate.dialect.MySQLDialect
+    show-sql: true
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 500MB
+      max-request-size: 500MB
+      file-size-threshold: 2KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+security:
+  jwt:
+    # base64-encoded 256-bit key (example only, replace in real usage)
+    secret: MjU2Yml0c2VjcmV0a2V5MjU2Yml0c2VjcmV0a2V5MjU2Yml0c2VjcmV0
+    expiration-ms: 86400000
+
+  logging:
+    level:
+      org.springframework.security: info
+
+app:
+  base-url: http://localhost:9192
+  upload:
+    dir: uploads
+    max-file-size: 100MB
+  email-verification-enabled: ${EMAIL_VERIFICATION_ENABLED:false}  # Set to true in production
+  teacher:
+    registration-enabled: ${TEACHER_REGISTRATION_ENABLED:false}  # Enable/disable teacher registration (default: true)
+    login-enabled: ${TEACHER_LOGIN_ENABLED:false}  # Enable/disable teacher login (default: true)
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_1234567890}  # Replace with your Razorpay Key ID
+  key-secret: ${RAZORPAY_KEY_SECRET:your_secret_key}  # Replace with your Razorpay Key Secret
+  enabled: ${RAZORPAY_ENABLED:true}  # Set to false to use mock gateway
+

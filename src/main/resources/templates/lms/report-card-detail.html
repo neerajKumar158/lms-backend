@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Card Details - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row">
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Report Card Details</h2>
+            <button id="exportPdfBtn" class="btn btn-primary" onclick="exportReportCardPdf()" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg> Export / Print Report
+            </button>
+        </div>
+        <div id="reportCardDetail" class="card">
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const courseId = new URLSearchParams(window.location.search).get('courseId');
+        const studentId = new URLSearchParams(window.location.search).get('studentId');
+
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        async function loadReportCardDetail() {
+            if (!courseId) {
+                document.getElementById('reportCardDetail').innerHTML = 
+                    '<div class="card-body"><div class="alert alert-danger">Course ID is required.</div></div>';
+                return;
+            }
+
+            try {
+                let url = '/api/lms/report-card/student/course/' + courseId;
+                if (studentId) {
+                    // Teacher viewing student's report card
+                    url = '/api/lms/report-card/student/course/' + courseId + '?studentId=' + studentId;
+                }
+
+                console.log('Loading report card from:', url);
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const responseText = await response.text();
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        errorData = { error: responseText || 'Unknown error' };
+                    }
+                    
+                    // Handle specific error cases
+                    if (response.status === 401) {
+                        window.location.href = '/ui/auth';
+                        return;
+                    }
+                    
+                    throw new Error(errorData.error || 'Failed to load report card');
+                }
+
+                let reportCard;
+                try {
+                    reportCard = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error('Invalid response from server: ' + responseText.substring(0, 100));
+                }
+                
+                if (reportCard.error) {
+                    throw new Error(reportCard.error);
+                }
+                
+                displayReportCardDetail(reportCard);
+                // Show export button after data is loaded
+                document.getElementById('exportPdfBtn').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading report card:', error);
+                document.getElementById('reportCardDetail').innerHTML = 
+                    '<div class="card-body">' +
+                    '<div class="alert alert-danger">' +
+                    '<h5>Error Loading Report Card</h5>' +
+                    '<p>' + escapeHtml(error.message || 'Unknown error') + '</p>' +
+                    '<p class="small text-muted">If this problem persists, please contact support.</p>' +
+                    '<a href="/ui/lms/student/dashboard" class="btn btn-sm btn-primary mt-2">Back to Dashboard</a>' +
+                    '</div></div>';
+            }
+        }
+
+        async function exportReportCardPdf() {
+            if (!courseId) {
+                alert('Course ID is required');
+                return;
+            }
+
+            try {
+                let url = '/api/lms/export/report-card/course/' + courseId;
+                if (studentId) {
+                    url += '?studentId=' + studentId;
+                }
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type') || '';
+                    const blob = await response.blob();
+                    
+                    // Check if it's HTML (current implementation) or actual PDF
+                    if (contentType.includes('text/html')) {
+                        // For HTML content, open in new window for printing
+                        const htmlContent = await blob.text();
+                        const newWindow = window.open('', '_blank');
+                        newWindow.document.write(htmlContent);
+                        newWindow.document.close();
+                        
+                        // Wait a bit for content to load, then trigger print dialog
+                        setTimeout(() => {
+                            newWindow.print();
+                        }, 500);
+                        
+                        // Also offer download option
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = 'report-card-' + courseId + '.html';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            window.URL.revokeObjectURL(downloadUrl);
+                            document.body.removeChild(a);
+                        }, 100);
+                    } else if (contentType.includes('application/pdf')) {
+                        // For actual PDF, download directly
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = 'report-card-' + courseId + '.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            window.URL.revokeObjectURL(downloadUrl);
+                            document.body.removeChild(a);
+                        }, 100);
+                    } else {
+                        // Fallback: try to download as HTML
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = 'report-card-' + courseId + '.html';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            window.URL.revokeObjectURL(downloadUrl);
+                            document.body.removeChild(a);
+                        }, 100);
+                    }
+                } else {
+                    const error = await response.json().catch(() => ({ error: 'Failed to export PDF' }));
+                    alert('Error: ' + (error.error || 'Failed to export PDF'));
+                }
+            } catch (error) {
+                console.error('Error exporting PDF:', error);
+                alert('Failed to export PDF: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        function displayReportCardDetail(reportCard) {
+            const section = document.getElementById('reportCardDetail');
+            
+            // Check if report card has any data
+            if (!reportCard || (!reportCard.quizScores && !reportCard.assignmentScores)) {
+                section.innerHTML = `
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h5>No grades available yet</h5>
+                            <p>This course doesn't have any quiz or assignment scores yet. Complete quizzes and assignments to see your report card.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="card-body">
+                    <h3>${escapeHtml(reportCard.courseTitle || 'Course')}</h3>
+                    ${reportCard.studentName ? '<p class="text-muted">Student: ' + escapeHtml(reportCard.studentName) + '</p>' : ''}
+                    <div class="row mb-4 mt-3">
+                        <div class="col-md-4 text-center">
+                            <h5>Overall Score</h5>
+                            <h2 class="text-primary">${(reportCard.overallScore || 0).toFixed(2)}%</h2>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h5>Letter Grade</h5>
+                            <h2 class="text-success">${reportCard.letterGrade || 'N/A'}</h2>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h5>Quiz Average</h5>
+                            <h4 class="text-info">${(reportCard.quizAverage || 0).toFixed(2)}%</h4>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6 text-center">
+                            <h5>Assignment Average</h5>
+                            <h4 class="text-warning">${(reportCard.assignmentAverage || 0).toFixed(2)}%</h4>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <h5>Completion</h5>
+                            <h4>${reportCard.quizzesCompleted || 0}/${reportCard.totalQuizzes || 0} Quizzes<br>
+                            ${reportCard.assignmentsCompleted || 0}/${reportCard.totalAssignments || 0} Assignments</h4>
+                        </div>
+                    </div>
+                    <hr>
+            `;
+
+            // Quiz Scores
+            if (reportCard.quizScores && reportCard.quizScores.length > 0) {
+                html += '<h5 class="mt-4">Quiz Scores</h5><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Quiz</th><th>Score</th><th>Max Score</th><th>Percentage</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+                reportCard.quizScores.forEach(quiz => {
+                    const passed = quiz.passed ? '<span class="badge bg-success">Passed</span>' : '<span class="badge bg-danger">Failed</span>';
+                    html += `<tr>
+                        <td>${escapeHtml(quiz.quizTitle || 'Untitled')}</td>
+                        <td>${quiz.score || 0}</td>
+                        <td>${quiz.maxScore || 0}</td>
+                        <td>${(quiz.percentage || 0).toFixed(2)}%</td>
+                        <td>${passed}</td>
+                        <td>${quiz.attemptDate ? new Date(quiz.attemptDate).toLocaleDateString() : 'N/A'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="alert alert-info mt-4">No quiz scores available yet.</div>';
+            }
+
+            // Assignment Scores
+            if (reportCard.assignmentScores && reportCard.assignmentScores.length > 0) {
+                html += '<h5 class="mt-4">Assignment Scores</h5><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Assignment</th><th>Score</th><th>Max Score</th><th>Percentage</th><th>Status</th><th>Submitted</th><th>Graded</th></tr></thead><tbody>';
+                reportCard.assignmentScores.forEach(assignment => {
+                    const isGraded = assignment.isGraded !== false && assignment.score !== null && assignment.score !== undefined;
+                    const scoreDisplay = isGraded ? (assignment.score || 0) : '<span class="text-muted">Pending</span>';
+                    const percentageDisplay = isGraded ? `${(assignment.percentage || 0).toFixed(2)}%` : '<span class="text-muted">Pending</span>';
+                    const statusBadge = isGraded ? 
+                        '<span class="badge bg-success">GRADED</span>' : 
+                        '<span class="badge bg-warning">PENDING</span>';
+                    
+                    html += `<tr>
+                        <td>${escapeHtml(assignment.assignmentTitle || 'Untitled')}</td>
+                        <td>${scoreDisplay}</td>
+                        <td>${assignment.maxScore || 0}</td>
+                        <td>${percentageDisplay}</td>
+                        <td>${statusBadge}</td>
+                        <td>${assignment.submittedDate ? new Date(assignment.submittedDate).toLocaleDateString() : 'N/A'}</td>
+                        <td>${assignment.gradedDate ? new Date(assignment.gradedDate).toLocaleDateString() : '<span class="text-muted">Not Graded Yet</span>'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="alert alert-info mt-4">No assignment scores available yet.</div>';
+            }
+
+            html += '</div>';
+            section.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        if (courseId) {
+            loadReportCardDetail();
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <!-- Notification Bell Icon -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-link text-white position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdownMenu" style="min-width: 350px; max-width: 400px; max-height: 500px; overflow-y: auto;">
+                        <li><h6 class="dropdown-header">Notifications</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li id="notificationListItems">
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="/ui/lms/notifications">View All Notifications</a></li>
+                    </ul>
+                </div>
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4">My Dashboard</h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <h3>My Enrollments</h3>
+                <div id="enrollmentsList" class="list-group mb-4">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mt-4">Progress Overview</h3>
+                <div id="progressOverview" class="card mb-4">
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading progress...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mt-4">My Report Card</h3>
+                <div id="reportCardSection" class="card">
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading report card...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mt-4">My Certificates</h3>
+                <div id="certificatesSection" class="card">
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading certificates...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mt-4">Upcoming Live Sessions</h3>
+                <div id="liveSessionsSection" class="card">
+                    <div class="card-body">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading live sessions...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Quick Actions</h5>
+                        <a href="/ui/lms/courses" class="btn btn-primary w-100 mb-2">Browse Courses</a>
+                        <a href="/ui/lms" class="btn btn-secondary w-100">Back to Home</a>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Notifications</h5>
+                        <div id="notificationsList" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        
+        async function loadEnrollments() {
+            if (!token) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/lms/enrollments', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load enrollments');
+                }
+                
+                const enrollments = await response.json();
+                displayEnrollments(enrollments);
+            } catch (error) {
+                console.error('Error loading enrollments:', error);
+                document.getElementById('enrollmentsList').innerHTML = 
+                    '<div class="alert alert-danger">Failed to load enrollments. Please login.</div>';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function displayEnrollments(enrollments) {
+            const list = document.getElementById('enrollmentsList');
+            
+            if (!enrollments || enrollments.length === 0) {
+                list.innerHTML = '<div class="alert alert-info">You are not enrolled in any courses yet. <a href="/ui/lms/courses">Browse Courses</a></div>';
+                displayProgressOverview([]);
+                return;
+            }
+            
+            // Display progress overview after loading enrollments
+            displayProgressOverview(enrollments);
+            
+            list.innerHTML = enrollments.map(enrollment => {
+                const course = enrollment.course || {};
+                const progress = enrollment.progressPercentage || 0;
+                const status = enrollment.status || 'ACTIVE';
+                const statusBadge = status === 'COMPLETED' ? 
+                    '<span class="badge bg-success">Completed</span>' : 
+                    '<span class="badge bg-primary">In Progress</span>';
+                
+                return `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5>${escapeHtml(course.title || 'Untitled Course')} ${statusBadge}</h5>
+                                <p class="text-muted">${escapeHtml(course.description ? course.description.substring(0, 150) + '...' : 'No description')}</p>
+                                <div class="progress mb-2" style="height: 25px;">
+                                    <div class="progress-bar ${progress === 100 ? 'bg-success' : ''}" 
+                                         role="progressbar" 
+                                         style="width: ${progress}%"
+                                         aria-valuenow="${progress}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        ${progress}% Complete
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    Enrolled: ${enrollment.enrolledAt ? new Date(enrollment.enrolledAt).toLocaleDateString() : 'N/A'}
+                                    ${enrollment.lastAccessedAt ? ' | Last accessed: ' + new Date(enrollment.lastAccessedAt).toLocaleDateString() : ''}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="/ui/lms/courses/${course.id}" class="btn btn-sm btn-primary">Continue Learning</a>
+                            ${progress === 100 ? 
+                                '<button class="btn btn-sm btn-success" disabled>Course Completed!</button>' : 
+                                '<button class="btn btn-sm btn-outline-secondary" onclick="updateProgress(' + enrollment.id + ', ' + progress + ')">Update Progress</button>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function updateProgress(enrollmentId, currentProgress) {
+            const newProgress = prompt('Enter new progress percentage (0-100):', currentProgress);
+            if (newProgress === null || isNaN(newProgress) || newProgress < 0 || newProgress > 100) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/lms/enrollments/${enrollmentId}/progress`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ progress: parseInt(newProgress) })
+                });
+                
+                if (response.ok) {
+                    alert('Progress updated successfully!');
+                    loadEnrollments();
+                } else {
+                    const result = await response.json();
+                    alert('Error: ' + (result.error || 'Failed to update progress'));
+                }
+            } catch (error) {
+                console.error('Error updating progress:', error);
+                alert('Failed to update progress');
+            }
+        }
+
+        function displayProgressOverview(enrollments) {
+            const section = document.getElementById('progressOverview');
+            
+            if (!enrollments || enrollments.length === 0) {
+                section.innerHTML = `
+                    <div class="card-body">
+                        <div class="alert alert-info">No enrollments yet. Start learning to see your progress!</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calculate statistics
+            const totalCourses = enrollments.length;
+            const completedCourses = enrollments.filter(e => e.status === 'COMPLETED' || (e.progressPercentage || 0) >= 100).length;
+            const inProgressCourses = enrollments.filter(e => e.status === 'ACTIVE' && (e.progressPercentage || 0) < 100).length;
+            const totalProgress = enrollments.reduce((sum, e) => sum + (e.progressPercentage || 0), 0);
+            const averageProgress = totalProgress / totalCourses;
+            
+            // Count by status
+            const activeCount = enrollments.filter(e => e.status === 'ACTIVE').length;
+            const completedCount = enrollments.filter(e => e.status === 'COMPLETED').length;
+            
+            // Calculate total hours (if available)
+            const totalHours = enrollments.reduce((sum, e) => {
+                const course = e.course || {};
+                return sum + (course.durationHours || 0);
+            }, 0);
+            
+            section.innerHTML = `
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-3">
+                            <h4 class="text-primary">${totalCourses}</h4>
+                            <p class="text-muted mb-0">Total Courses</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-success">${completedCourses}</h4>
+                            <p class="text-muted mb-0">Completed</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-warning">${inProgressCourses}</h4>
+                            <p class="text-muted mb-0">In Progress</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-info">${averageProgress.toFixed(1)}%</h4>
+                            <p class="text-muted mb-0">Avg Progress</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Overall Progress</h6>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: ${averageProgress}%"
+                                     aria-valuenow="${averageProgress}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    ${averageProgress.toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Course Status</h6>
+                            <div class="d-flex gap-3">
+                                <div>
+                                    <span class="badge bg-primary">${activeCount} Active</span>
+                                </div>
+                                <div>
+                                    <span class="badge bg-success">${completedCount} Completed</span>
+                                </div>
+                            </div>
+                            ${totalHours > 0 ? `<p class="text-muted small mt-2">Total Course Hours: ${totalHours}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadReportCard() {
+            if (!token) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/lms/report-card/student', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load report card');
+                }
+                
+                const reportCard = await response.json();
+                displayReportCard(reportCard);
+            } catch (error) {
+                console.error('Error loading report card:', error);
+                document.getElementById('reportCardSection').innerHTML = 
+                    '<div class="card-body"><div class="alert alert-warning">Failed to load report card.</div></div>';
+            }
+        }
+
+        function displayReportCard(reportCard) {
+            const section = document.getElementById('reportCardSection');
+            
+            if (!reportCard || !reportCard.courseGrades || reportCard.courseGrades.length === 0) {
+                section.innerHTML = `
+                    <div class="card-body">
+                        <div class="alert alert-info">No grades available yet. Complete quizzes and assignments to see your report card.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const overallGPA = reportCard.overallGPA || 0;
+            const overallGrade = reportCard.overallGrade || 'N/A';
+            const totalCourses = reportCard.totalCourses || 0;
+
+            let html = `
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <h4>Overall GPA</h4>
+                            <h2 class="text-primary">${overallGPA.toFixed(2)}</h2>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h4>Overall Grade</h4>
+                            <h2 class="text-success">${overallGrade}</h2>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h4>Total Courses</h4>
+                            <h2 class="text-info">${totalCourses}</h2>
+                        </div>
+                    </div>
+                    <hr>
+                    <h5 class="mb-3">Course Grades</h5>
+            `;
+
+            reportCard.courseGrades.forEach(course => {
+                const courseScore = course.overallScore || 0;
+                const letterGrade = course.letterGrade || 'N/A';
+                const quizzesCompleted = course.quizzesCompleted || 0;
+                const totalQuizzes = course.totalQuizzes || 0;
+                const assignmentsCompleted = course.assignmentsCompleted || 0;
+                const totalAssignments = course.totalAssignments || 0;
+                const courseId = course.courseId;
+
+                console.log('Processing course grade:', course); // Debug log
+
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5>${escapeHtml(course.courseTitle || 'Untitled Course')}</h5>
+                                    <p class="mb-2">
+                                        <strong>Score:</strong> ${courseScore.toFixed(2)}% | 
+                                        <strong>Grade:</strong> <span class="badge bg-success">${letterGrade}</span>
+                                    </p>
+                                    <p class="text-muted small mb-1">
+                                        Quizzes: ${quizzesCompleted}/${totalQuizzes} | 
+                                        Assignments: ${assignmentsCompleted}/${totalAssignments}
+                                    </p>
+                                </div>
+                                <div>
+                                    ${courseId ? `
+                                        <button class="btn btn-sm btn-outline-primary me-2" onclick="viewCourseReportCard(${courseId})">
+                                            View Details
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="exportReportCardPdf(${courseId})">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                            </svg> PDF
+                                        </button>
+                                    ` : '<span class="text-muted small">No course ID available</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            section.innerHTML = html;
+        }
+
+        function viewCourseReportCard(courseId) {
+            if (!courseId) {
+                console.error('Course ID is missing');
+                alert('Course ID is missing. Cannot view report card details.');
+                return;
+            }
+            console.log('Navigating to report card detail for course:', courseId);
+            window.location.href = `/ui/lms/report-card/detail?courseId=${courseId}`;
+        }
+
+        async function exportReportCardPdf(courseId) {
+            if (!courseId) {
+                alert('Course ID is required');
+                return;
+            }
+
+            if (!token) {
+                alert('Please login first');
+                window.location.href = '/ui/auth';
+                return;
+            }
+
+            try {
+                const url = `/api/lms/export/report-card/course/${courseId}`;
+                console.log('Exporting PDF from:', url);
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                console.log('PDF export response status:', response.status);
+                console.log('PDF export content type:', response.headers.get('content-type'));
+
+                if (response.ok) {
+                    // Check content type - can be PDF or HTML
+                    const contentType = response.headers.get('content-type') || '';
+                    const blob = await response.blob();
+                    
+                    if (blob.size === 0) {
+                        alert('Error: Empty file received from server');
+                        return;
+                    }
+                    
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    
+                    // Set appropriate file extension based on content type
+                    if (contentType.includes('application/pdf')) {
+                        a.download = `report-card-${courseId}.pdf`;
+                    } else if (contentType.includes('text/html')) {
+                        a.download = `report-card-${courseId}.html`;
+                    } else {
+                        a.download = `report-card-${courseId}.html`;
+                    }
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Clean up after a delay
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(downloadUrl);
+                        document.body.removeChild(a);
+                    }, 100);
+                } else {
+                    const errorText = await response.text();
+                    console.error('PDF export error response:', errorText);
+                    let error;
+                    try {
+                        error = JSON.parse(errorText);
+                    } catch (e) {
+                        error = { error: errorText || 'Failed to export PDF' };
+                    }
+                    alert('Error: ' + (error.error || 'Failed to export PDF'));
+                }
+            } catch (error) {
+                console.error('Error exporting PDF:', error);
+                alert('Failed to export PDF: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        async function loadCertificates() {
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/certificates/student', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const certificates = await response.json();
+                    displayCertificates(certificates);
+                }
+            } catch (error) {
+                console.error('Error loading certificates:', error);
+            }
+        }
+
+        function displayCertificates(certificates) {
+            const section = document.getElementById('certificatesSection');
+            
+            if (!certificates || certificates.length === 0) {
+                section.innerHTML = '<div class="card-body"><div class="alert alert-info">No certificates yet. Complete courses to earn certificates!</div></div>';
+                return;
+            }
+
+            let html = '<div class="card-body">';
+            certificates.forEach(cert => {
+                const certNumber = cert.certificateNumber || '';
+                const courseId = cert.courseId || '';
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5>${escapeHtml(cert.course.title || 'Course')}</h5>
+                            <p><strong>Grade:</strong> <span class="badge bg-success">${cert.grade || 'N/A'}</span></p>
+                            <p><strong>Score:</strong> ${(cert.finalScore || 0).toFixed(2)}%</p>
+                            <p><strong>Issued:</strong> ${new Date(cert.issuedAt).toLocaleDateString()}</p>
+                            <p><strong>Certificate No:</strong> <code>${escapeHtml(cert.certificateNumber)}</code></p>
+                            <a href="/ui/lms/certificate/${cert.certificateNumber}" class="btn btn-sm btn-primary" target="_blank">View Certificate</a>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            section.innerHTML = html;
+        }
+
+        async function loadNotifications() {
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/notifications/unread', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const notifications = await response.json();
+                    displayNotifications(notifications);
+                    updateNotificationBadge();
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function displayNotifications(notifications) {
+            const list = document.getElementById('notificationsList');
+            
+            if (!notifications || notifications.length === 0) {
+                list.innerHTML = '<p class="text-muted small">No new notifications</p>';
+                return;
+            }
+
+            list.innerHTML = notifications.slice(0, 5).map(notif => {
+                const typeClass = {
+                    'INFO': 'text-info',
+                    'SUCCESS': 'text-success',
+                    'WARNING': 'text-warning',
+                    'ERROR': 'text-danger',
+                    'ASSIGNMENT': 'text-primary',
+                    'QUIZ': 'text-primary',
+                    'ANNOUNCEMENT': 'text-info',
+                    'CERTIFICATE': 'text-success'
+                }[notif.type] || 'text-muted';
+                const clickHandler = notif.actionUrl ? `onclick="window.location.href='${notif.actionUrl}'"` : '';
+                const cardClass = notif.isRead ? '' : 'border-primary';
+
+                return `
+                    <div class="small mb-2 p-2 border-start border-3 ${typeClass} ${cardClass}" style="border-color: currentColor !important; cursor: pointer;" ${clickHandler}>
+                        <strong>${escapeHtml(notif.title || 'Notification')}</strong><br>
+                        <span class="text-muted">${escapeHtml(notif.message || '')}</span><br>
+                        <small class="text-muted">${new Date(notif.createdAt).toLocaleDateString()}</small>
+                    </div>
+                `;
+            }).join('') + '<a href="/ui/lms/notifications" class="btn btn-sm btn-outline-primary w-100 mt-2">View All</a>';
+        }
+
+        async function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+
+            if (count === undefined) {
+                if (!token) return;
+                try {
+                    const response = await fetch('/api/lms/notifications/unread/count', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        count = data.count || 0;
+                    } else {
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error updating badge:', error);
+                    return;
+                }
+            }
+
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function showNotifications() {
+            window.location.href = '/ui/lms/notifications';
+        }
+
+        function showAllNotifications() {
+            window.location.href = '/ui/lms/notifications';
+        }
+
+        async function loadLiveSessions() {
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/live-sessions', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const sessions = await response.json();
+                    console.log('Loaded live sessions:', sessions); // Debug log
+                    displayLiveSessions(sessions);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to load live sessions:', response.status, errorText);
+                    document.getElementById('liveSessionsSection').innerHTML = 
+                        '<div class="card-body"><div class="alert alert-warning">Failed to load live sessions.</div></div>';
+                }
+            } catch (error) {
+                console.error('Error loading live sessions:', error);
+                document.getElementById('liveSessionsSection').innerHTML = 
+                    '<div class="card-body"><div class="alert alert-warning">Error loading live sessions.</div></div>';
+            }
+        }
+
+        function displayLiveSessions(sessions) {
+            const section = document.getElementById('liveSessionsSection');
+            
+            if (!sessions || sessions.length === 0) {
+                section.innerHTML = '<div class="card-body"><div class="alert alert-info">No upcoming live sessions.</div></div>';
+                return;
+            }
+            
+            console.log('Displaying live sessions:', sessions); // Debug log
+            console.log('Number of sessions received:', sessions.length); // Debug log
+            
+            // Show all SCHEDULED and ONGOING sessions (backend already filters)
+            // Sort: ONGOING first, then SCHEDULED by date
+            const sortedSessions = sessions
+                .filter(session => session && (session.status === 'ONGOING' || session.status === 'SCHEDULED'))
+                .sort((a, b) => {
+                    // ONGOING sessions first
+                    if (a.status === 'ONGOING' && b.status !== 'ONGOING') return -1;
+                    if (a.status !== 'ONGOING' && b.status === 'ONGOING') return 1;
+                    // Then sort by scheduled date
+                    if (!a.scheduledDateTime && !b.scheduledDateTime) return 0;
+                    if (!a.scheduledDateTime) return 1;
+                    if (!b.scheduledDateTime) return -1;
+                    return new Date(a.scheduledDateTime) - new Date(b.scheduledDateTime);
+                })
+                .slice(0, 10); // Show up to 10 sessions
+            
+            console.log('Filtered and sorted sessions:', sortedSessions.length); // Debug log
+            
+            if (sortedSessions.length === 0) {
+                section.innerHTML = '<div class="card-body"><div class="alert alert-info">No upcoming live sessions.</div></div>';
+                return;
+            }
+            
+            let html = '<div class="card-body"><h6 class="mb-3">Upcoming & Live Sessions</h6>';
+            sortedSessions.forEach(session => {
+                const scheduledDate = session.scheduledDateTime ? new Date(session.scheduledDateTime) : null;
+                const now = new Date();
+                const isOngoing = session.status === 'ONGOING';
+                const isPast = scheduledDate && scheduledDate < now && !isOngoing;
+                
+                const statusBadge = isOngoing ? 
+                    '<span class="badge bg-success">LIVE NOW</span>' : 
+                    (isPast ? '<span class="badge bg-secondary">Past</span>' : '<span class="badge bg-primary">Scheduled</span>');
+                
+                html += `
+                    <div class="card mb-3 ${isOngoing ? 'border-success' : ''}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>${escapeHtml(session.title || 'Untitled Session')} ${statusBadge}</h6>
+                                    <p class="text-muted small mb-1">${escapeHtml(session.description || '')}</p>
+                                    <p class="small mb-0">
+                                        ${scheduledDate ? `<strong>When:</strong> ${scheduledDate.toLocaleString()}<br>` : ''}
+                                        ${session.course ? `<strong>Course:</strong> ${escapeHtml(session.course.title || 'N/A')}` : '<strong>Type:</strong> Standalone Session'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <a href="/ui/lms/live/${session.id}" class="btn btn-sm ${isOngoing ? 'btn-success' : 'btn-primary'}">
+                                        ${isOngoing ? 'Join Now' : 'View Details'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            section.innerHTML = html;
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                window.location.href = '/ui/lms';
+            }
+        }
+
+        // Check user role and redirect if not student
+        async function checkStudentAccess() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    const userType = user.userType || user.user_type;
+                    if (userType !== 'STUDENT') {
+                        alert('Access denied. This page is only for students.');
+                        window.location.href = '/ui/lms';
+                        return;
+                    }
+                } else {
+                    window.location.href = '/ui/auth';
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking access:', error);
+                window.location.href = '/ui/auth';
+                return;
+            }
+        }
+
+        // Notification dropdown functions (compatible with existing functions)
+        async function loadNotificationDropdown() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/notifications/unread', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const notifications = await response.json();
+                    displayNotificationDropdown(notifications.slice(0, 5));
+                    updateNotificationBadge(notifications.length);
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function displayNotificationDropdown(notifications) {
+            const container = document.getElementById('notificationListItems');
+            if (!container) return;
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="text-center p-3 text-muted">No new notifications</div>';
+                return;
+            }
+
+            container.innerHTML = notifications.map(notif => {
+                const icon = getNotificationIcon(notif.type);
+                const date = new Date(notif.createdAt).toLocaleString();
+                return `
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="handleNotificationClick(${notif.id}, '${notif.actionUrl || ''}'); return false;">
+                            <div class="d-flex align-items-start">
+                                <i class="bi ${icon} me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold small">${escapeHtml(notif.title || 'Notification')}</div>
+                                    <div class="text-muted small">${escapeHtml(notif.message || '').substring(0, 50)}${notif.message && notif.message.length > 50 ? '...' : ''}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">${date}</div>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'INFO': 'bi-info-circle',
+                'SUCCESS': 'bi-check-circle',
+                'WARNING': 'bi-exclamation-triangle',
+                'ERROR': 'bi-x-circle',
+                'ASSIGNMENT': 'bi-file-earmark-text',
+                'QUIZ': 'bi-question-circle',
+                'ANNOUNCEMENT': 'bi-megaphone',
+                'CERTIFICATE': 'bi-award'
+            };
+            return icons[type] || 'bi-bell';
+        }
+
+        async function handleNotificationClick(notificationId, actionUrl) {
+            const token = localStorage.getItem('token');
+            try {
+                await fetch(`/api/lms/notifications/${notificationId}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            } catch (err) {
+                console.error('Error marking as read:', err);
+            }
+
+            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('notificationDropdown'));
+            if (dropdown) dropdown.hide();
+
+            if (actionUrl && actionUrl.trim() !== '') {
+                window.location.href = actionUrl;
+            } else {
+                loadNotificationDropdown();
+            }
+        }
+
+        // Load notifications when dropdown is opened
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('show.bs.dropdown', function() {
+                    loadNotificationDropdown();
+                });
+            }
+        });
+
+        // Check access before loading data
+        checkStudentAccess().then(() => {
+            loadEnrollments();
+            loadReportCard();
+            loadCertificates();
+            loadLiveSessions();
+            loadNotifications();
+            updateNotificationBadge();
+            setInterval(() => {
+                updateNotificationBadge();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
+
