@@ -42,6 +42,21 @@ public class CoursePayment {
     @Column(length = 1000)
     private String failureReason;
 
+    // Coupon and Offer tracking
+    @ManyToOne
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
+    @ManyToOne
+    @JoinColumn(name = "offer_id")
+    private CourseOffer offer;
+
+    @Column
+    private BigDecimal originalAmount; // Original price before discount
+
+    @Column
+    private BigDecimal discountAmount; // Discount applied
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public UserAccount getStudent() { return student; }
@@ -64,5 +79,13 @@ public class CoursePayment {
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
+    public Coupon getCoupon() { return coupon; }
+    public void setCoupon(Coupon coupon) { this.coupon = coupon; }
+    public CourseOffer getOffer() { return offer; }
+    public void setOffer(CourseOffer offer) { this.offer = offer; }
+    public BigDecimal getOriginalAmount() { return originalAmount; }
+    public void setOriginalAmount(BigDecimal originalAmount) { this.originalAmount = originalAmount; }
+    public BigDecimal getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
 }
 

@@ -5,14 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Organization Dashboard - LMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
-            <div class="navbar-nav ms-auto d-flex flex-row">
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
                 <a class="nav-link me-3" href="/ui/lms">Home</a>
-                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+                <a class="nav-link me-3" href="#" onclick="logout(); return false;">Logout</a>
+                
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                
+                <!-- Notification Bell Icon - Last Item -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-white position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdownMenu" style="min-width: 350px; max-width: 400px; max-height: 500px; overflow-y: auto;">
+                        <li><h6 class="dropdown-header">Notifications</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li id="notificationListItems">
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="/ui/lms/notifications">View All Notifications</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -379,6 +410,136 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Notification functions
+        async function loadNotificationDropdown() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/notifications/unread', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const notifications = await response.json();
+                    displayNotificationDropdown(notifications.slice(0, 5));
+                    updateNotificationBadge(notifications.length);
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function displayNotificationDropdown(notifications) {
+            const container = document.getElementById('notificationListItems');
+            if (!container) return;
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="text-center p-3 text-muted">No new notifications</div>';
+                return;
+            }
+
+            container.innerHTML = notifications.map(notif => {
+                const icon = getNotificationIcon(notif.type);
+                const date = new Date(notif.createdAt).toLocaleString();
+                return `
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="handleNotificationClick(${notif.id}, '${notif.actionUrl || ''}'); return false;">
+                            <div class="d-flex align-items-start">
+                                <i class="bi ${icon} me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold small">${escapeHtml(notif.title || 'Notification')}</div>
+                                    <div class="text-muted small">${escapeHtml((notif.message || '').substring(0, 50))}${notif.message && notif.message.length > 50 ? '...' : ''}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">${date}</div>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'INFO': 'bi-info-circle',
+                'SUCCESS': 'bi-check-circle',
+                'WARNING': 'bi-exclamation-triangle',
+                'ERROR': 'bi-x-circle',
+                'ASSIGNMENT': 'bi-file-earmark-text',
+                'QUIZ': 'bi-question-circle',
+                'ANNOUNCEMENT': 'bi-megaphone',
+                'CERTIFICATE': 'bi-award'
+            };
+            return icons[type] || 'bi-bell';
+        }
+
+        async function handleNotificationClick(notificationId, actionUrl) {
+            const token = localStorage.getItem('token');
+            try {
+                await fetch(`/api/lms/notifications/${notificationId}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            } catch (err) {
+                console.error('Error marking as read:', err);
+            }
+
+            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('notificationDropdown'));
+            if (dropdown) dropdown.hide();
+
+            if (actionUrl && actionUrl.trim() !== '') {
+                window.location.href = actionUrl;
+            } else {
+                loadNotificationDropdown();
+            }
+        }
+
+        async function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            if (count === undefined) {
+                try {
+                    const response = await fetch('/api/lms/notifications/unread/count', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        count = data.count || 0;
+                    }
+                } catch (error) {
+                    console.error('Error updating badge:', error);
+                    return;
+                }
+            }
+
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Load notifications when dropdown is opened
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('show.bs.dropdown', function() {
+                    loadNotificationDropdown();
+                });
+            }
+            // Initial load
+            loadNotificationDropdown();
+            updateNotificationBadge();
+            setInterval(() => {
+                updateNotificationBadge();
+            }, 30000); // Update every 30 seconds
+        });
 
         loadDashboard();
     </script>

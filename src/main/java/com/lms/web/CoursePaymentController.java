@@ -23,12 +23,14 @@ public class CoursePaymentController {
     @PostMapping("/create-order/{courseId}")
     public ResponseEntity<Map<String, Object>> createPaymentOrder(
             @AuthenticationPrincipal User principal,
-            @PathVariable("courseId") Long courseId) {
+            @PathVariable("courseId") Long courseId,
+            @RequestBody(required = false) CreateOrderRequest request) {
         try {
             var user = userAccountRepository.findByEmail(principal.getUsername())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
-            Map<String, Object> order = paymentService.createPaymentOrder(user.getId(), courseId);
+            String couponCode = request != null ? request.couponCode() : null;
+            Map<String, Object> order = paymentService.createPaymentOrder(user.getId(), courseId, couponCode);
             
             if (order.containsKey("error")) {
                 return ResponseEntity.badRequest().body(order);
@@ -62,5 +64,6 @@ public class CoursePaymentController {
     }
 
     record VerifyPaymentRequest(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature) {}
+    record CreateOrderRequest(String couponCode) {}
 }
 

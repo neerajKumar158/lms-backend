@@ -124,5 +124,27 @@ public class RazorpayService {
     public String getKeyId() {
         return keyId;
     }
+
+    /**
+     * Create a refund for a payment
+     */
+    public String createRefund(String paymentId, BigDecimal amount) throws RazorpayException {
+        if (!razorpayEnabled || razorpayClient == null) {
+            throw new RazorpayException("Razorpay is not configured");
+        }
+
+        try {
+            JSONObject refundRequest = new JSONObject();
+            // Amount in paise (multiply by 100)
+            refundRequest.put("amount", amount.multiply(new BigDecimal("100")).intValue());
+            refundRequest.put("payment_id", paymentId);
+
+            com.razorpay.Refund refund = razorpayClient.refunds.create(refundRequest);
+            return refund.get("id").toString();
+        } catch (RazorpayException e) {
+            e.printStackTrace();
+            throw new RazorpayException("Failed to create refund: " + e.getMessage());
+        }
+    }
 }
 

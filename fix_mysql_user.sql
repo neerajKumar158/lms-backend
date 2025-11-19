@@ -24,3 +24,4 @@ SHOW VARIABLES LIKE 'default_authentication_plugin';
 
 
 
+

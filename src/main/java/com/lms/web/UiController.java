@@ -156,5 +156,40 @@ public class UiController {
         model.addAttribute("courseId", courseId);
         return "lms/live-sessions-manage";
     }
+
+    @GetMapping("/lms/admin/analytics")
+    public String adminAnalytics(Model model) {
+        return "lms/admin-analytics";
+    }
+
+    @GetMapping("/lms/recommendations")
+    public String recommendations(Model model) {
+        return "lms/recommendations";
+    }
+
+    @GetMapping("/lms/wishlist")
+    public String wishlist(Model model) {
+        return "lms/wishlist";
+    }
+
+    @GetMapping("/lms/refunds")
+    public String refunds(Model model) {
+        return "lms/refunds";
+    }
+
+    @GetMapping("/lms/admin/coupons")
+    public String adminCoupons(Model model) {
+        return "lms/admin-coupons";
+    }
+
+    @GetMapping("/lms/admin/refunds")
+    public String adminRefunds(Model model) {
+        return "lms/admin-refunds";
+    }
+
+    @GetMapping("/lms/admin/manage")
+    public String adminManage(Model model) {
+        return "lms/admin-manage";
+    }
 }
 

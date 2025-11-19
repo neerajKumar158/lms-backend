@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Management - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/ui/lms/admin/analytics">Analytics</a>
+                <a class="nav-link" href="/ui/lms/admin/coupons">Coupons</a>
+                <a class="nav-link" href="/ui/lms/admin/refunds">Refunds</a>
+                <a class="nav-link active" href="/ui/lms/admin/manage">Manage All</a>
+                <a class="nav-link" href="/ui/lms">Home</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4">Admin Management Dashboard</h1>
+
+        <ul class="nav nav-tabs mb-4" id="managementTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button">Courses</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="teachers-tab" data-bs-toggle="tab" data-bs-target="#teachers" type="button">Teachers</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button">Students</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="organizations-tab" data-bs-toggle="tab" data-bs-target="#organizations" type="button">Organizations</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="managementTabsContent">
+            <!-- Courses Tab -->
+            <div class="tab-pane fade show active" id="courses" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>All Courses</h3>
+                    <button class="btn btn-primary" onclick="refreshCourses()">Refresh</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Instructor</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Enrollments</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coursesTableBody">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Teachers Tab -->
+            <div class="tab-pane fade" id="teachers" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>All Teachers</h3>
+                    <div>
+                        <button class="btn btn-success" onclick="showCreateTeacherModal()">Create Teacher</button>
+                        <button class="btn btn-primary" onclick="refreshTeachers()">Refresh</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Approved</th>
+                                <th>Courses</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachersTableBody">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div class="tab-pane fade" id="students" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>All Students</h3>
+                    <button class="btn btn-primary" onclick="refreshStudents()">Refresh</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Enrollments</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Organizations Tab -->
+            <div class="tab-pane fade" id="organizations" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>All Organizations</h3>
+                    <button class="btn btn-primary" onclick="refreshOrganizations()">Refresh</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Teachers</th>
+                                <th>Courses</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="organizationsTableBody">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Course Modal -->
+    <div class="modal fade" id="editCourseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Course</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCourseForm">
+                        <input type="hidden" id="editCourseId">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="editCourseTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="editCourseDescription" rows="4"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Price</label>
+                                <input type="number" step="0.01" class="form-control" id="editCoursePrice" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="editCourseStatus">
+                                    <option value="DRAFT">Draft</option>
+                                    <option value="PUBLISHED">Published</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCourse()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Teacher Modal -->
+    <div class="modal fade" id="createTeacherModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Teacher</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTeacherForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="teacherEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" id="teacherPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="teacherName">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="teacherPhone">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Qualifications</label>
+                            <textarea class="form-control" id="teacherQualifications" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Bio</label>
+                            <textarea class="form-control" id="teacherBio" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createTeacher()">Create Teacher</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshCourses();
+        });
+
+        // Tab change handlers
+        document.getElementById('teachers-tab').addEventListener('shown.bs.tab', function() {
+            refreshTeachers();
+        });
+        document.getElementById('students-tab').addEventListener('shown.bs.tab', function() {
+            refreshStudents();
+        });
+        document.getElementById('organizations-tab').addEventListener('shown.bs.tab', function() {
+            refreshOrganizations();
+        });
+
+        // ==================== COURSES ====================
+        async function refreshCourses() {
+            try {
+                const response = await fetch('/api/lms/admin/courses', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const courses = await response.json();
+                    displayCourses(courses);
+                } else {
+                    alert('Failed to load courses');
+                }
+            } catch (error) {
+                console.error('Error loading courses:', error);
+                alert('Failed to load courses');
+            }
+        }
+
+        function displayCourses(courses) {
+            const tbody = document.getElementById('coursesTableBody');
+            
+            if (!courses || courses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No courses found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = courses.map(course => `
+                <tr>
+                    <td>${course.id}</td>
+                    <td>${escapeHtml(course.title || 'N/A')}</td>
+                    <td>${escapeHtml(course.instructor?.name || course.instructor?.email || 'N/A')}</td>
+                    <td>₹${parseFloat(course.price || 0).toFixed(2)}</td>
+                    <td><span class="badge bg-${course.status === 'PUBLISHED' ? 'success' : 'secondary'}">${course.status || 'DRAFT'}</span></td>
+                    <td>${course.enrollmentCount || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editCourse(${course.id})">Edit</button>
+                        ${course.status === 'PUBLISHED' ? 
+                            `<button class="btn btn-sm btn-warning" onclick="unpublishCourse(${course.id})">Unpublish</button>` :
+                            `<button class="btn btn-sm btn-success" onclick="publishCourse(${course.id})">Publish</button>`
+                        }
+                        <button class="btn btn-sm btn-danger" onclick="deleteCourse(${course.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editCourse(courseId) {
+            // Load course details and show edit modal
+            fetch(`/api/lms/courses/${courseId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(response => response.json())
+            .then(course => {
+                document.getElementById('editCourseId').value = course.id;
+                document.getElementById('editCourseTitle').value = course.title || '';
+                document.getElementById('editCourseDescription').value = course.description || '';
+                document.getElementById('editCoursePrice').value = course.price || 0;
+                document.getElementById('editCourseStatus').value = course.status || 'DRAFT';
+                new bootstrap.Modal(document.getElementById('editCourseModal')).show();
+            })
+            .catch(error => {
+                console.error('Error loading course:', error);
+                alert('Failed to load course details');
+            });
+        }
+
+        async function saveCourse() {
+            const courseId = document.getElementById('editCourseId').value;
+            const courseData = {
+                title: document.getElementById('editCourseTitle').value,
+                description: document.getElementById('editCourseDescription').value,
+                price: parseFloat(document.getElementById('editCoursePrice').value),
+                status: document.getElementById('editCourseStatus').value
+            };
+
+            try {
+                const response = await fetch(`/api/lms/admin/courses/${courseId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(courseData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editCourseModal')).hide();
+                    alert('Course updated successfully');
+                    refreshCourses();
+                } else {
+                    alert(result.error || 'Failed to update course');
+                }
+            } catch (error) {
+                console.error('Error updating course:', error);
+                alert('Failed to update course');
+            }
+        }
+
+        async function publishCourse(courseId) {
+            if (!confirm('Are you sure you want to publish this course?')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/courses/${courseId}/publish`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Course published successfully');
+                    refreshCourses();
+                } else {
+                    alert(result.error || 'Failed to publish course');
+                }
+            } catch (error) {
+                console.error('Error publishing course:', error);
+                alert('Failed to publish course');
+            }
+        }
+
+        async function unpublishCourse(courseId) {
+            if (!confirm('Are you sure you want to unpublish this course?')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/courses/${courseId}/unpublish`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Course unpublished successfully');
+                    refreshCourses();
+                } else {
+                    alert(result.error || 'Failed to unpublish course');
+                }
+            } catch (error) {
+                console.error('Error unpublishing course:', error);
+                alert('Failed to unpublish course');
+            }
+        }
+
+        async function deleteCourse(courseId) {
+            if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/courses/${courseId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Course deleted successfully');
+                    refreshCourses();
+                } else {
+                    alert(result.error || 'Failed to delete course');
+                }
+            } catch (error) {
+                console.error('Error deleting course:', error);
+                alert('Failed to delete course');
+            }
+        }
+
+        // ==================== TEACHERS ====================
+        async function refreshTeachers() {
+            try {
+                const response = await fetch('/api/lms/admin/teachers', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayTeachers(data.teachers || []);
+                } else {
+                    alert('Failed to load teachers');
+                }
+            } catch (error) {
+                console.error('Error loading teachers:', error);
+                alert('Failed to load teachers');
+            }
+        }
+
+        function displayTeachers(teachers) {
+            const tbody = document.getElementById('teachersTableBody');
+            
+            if (!teachers || teachers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No teachers found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = teachers.map(teacher => `
+                <tr>
+                    <td>${teacher.id}</td>
+                    <td>${escapeHtml(teacher.name || 'N/A')}</td>
+                    <td>${escapeHtml(teacher.email || 'N/A')}</td>
+                    <td>${escapeHtml(teacher.phone || 'N/A')}</td>
+                    <td><span class="badge bg-${teacher.teacherApproved ? 'success' : 'warning'}">${teacher.teacherApproved ? 'Approved' : 'Pending'}</span></td>
+                    <td>${teacher.courseCount || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewTeacherDetails(${teacher.id})">View</button>
+                        ${!teacher.teacherApproved ? 
+                            `<button class="btn btn-sm btn-success" onclick="approveTeacher(${teacher.id})">Approve</button>` :
+                            `<button class="btn btn-sm btn-warning" onclick="disapproveTeacher(${teacher.id})">Disapprove</button>`
+                        }
+                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showCreateTeacherModal() {
+            document.getElementById('createTeacherForm').reset();
+            new bootstrap.Modal(document.getElementById('createTeacherModal')).show();
+        }
+
+        async function createTeacher() {
+            const teacherData = {
+                email: document.getElementById('teacherEmail').value,
+                password: document.getElementById('teacherPassword').value,
+                name: document.getElementById('teacherName').value,
+                phone: document.getElementById('teacherPhone').value,
+                qualifications: document.getElementById('teacherQualifications').value,
+                bio: document.getElementById('teacherBio').value
+            };
+
+            try {
+                const response = await fetch('/api/lms/admin/teachers/create', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(teacherData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('createTeacherModal')).hide();
+                    alert('Teacher created successfully');
+                    refreshTeachers();
+                } else {
+                    alert(result.error || 'Failed to create teacher');
+                }
+            } catch (error) {
+                console.error('Error creating teacher:', error);
+                alert('Failed to create teacher');
+            }
+        }
+
+        async function approveTeacher(teacherId) {
+            try {
+                const response = await fetch(`/api/lms/admin/teachers/${teacherId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Teacher approved successfully');
+                    refreshTeachers();
+                } else {
+                    alert(result.error || 'Failed to approve teacher');
+                }
+            } catch (error) {
+                console.error('Error approving teacher:', error);
+                alert('Failed to approve teacher');
+            }
+        }
+
+        async function disapproveTeacher(teacherId) {
+            if (!confirm('Are you sure you want to disapprove this teacher?')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/teachers/${teacherId}/disapprove`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Teacher disapproved successfully');
+                    refreshTeachers();
+                } else {
+                    alert(result.error || 'Failed to disapprove teacher');
+                }
+            } catch (error) {
+                console.error('Error disapproving teacher:', error);
+                alert('Failed to disapprove teacher');
+            }
+        }
+
+        function viewTeacherDetails(teacherId) {
+            fetch(`/api/lms/admin/teachers/${teacherId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(response => response.json())
+            .then(teacher => {
+                alert(`Teacher Details:\n\nName: ${teacher.name}\nEmail: ${teacher.email}\nPhone: ${teacher.phone}\nQualifications: ${teacher.qualifications || 'N/A'}\nCourses: ${teacher.courses?.length || 0}`);
+            })
+            .catch(error => {
+                console.error('Error loading teacher details:', error);
+                alert('Failed to load teacher details');
+            });
+        }
+
+        async function deleteTeacher(teacherId) {
+            if (!confirm('Are you sure you want to delete this teacher? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/teachers/${teacherId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Teacher deleted successfully');
+                    refreshTeachers();
+                } else {
+                    alert(result.error || 'Failed to delete teacher');
+                }
+            } catch (error) {
+                console.error('Error deleting teacher:', error);
+                alert('Failed to delete teacher');
+            }
+        }
+
+        // ==================== STUDENTS ====================
+        async function refreshStudents() {
+            try {
+                const response = await fetch('/api/lms/admin/students', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayStudents(data.students || []);
+                } else {
+                    alert('Failed to load students');
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+                alert('Failed to load students');
+            }
+        }
+
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentsTableBody');
+            
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No students found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = students.map(student => `
+                <tr>
+                    <td>${student.id}</td>
+                    <td>${escapeHtml(student.name || 'N/A')}</td>
+                    <td>${escapeHtml(student.email || 'N/A')}</td>
+                    <td>${escapeHtml(student.phone || 'N/A')}</td>
+                    <td>${student.enrollmentCount || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewStudentDetails(${student.id})">View</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewStudentDetails(studentId) {
+            fetch(`/api/lms/admin/students/${studentId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(response => response.json())
+            .then(student => {
+                const enrollments = student.enrollments?.map(e => `- ${e.courseTitle}`).join('\n') || 'None';
+                alert(`Student Details:\n\nName: ${student.name}\nEmail: ${student.email}\nPhone: ${student.phone || 'N/A'}\n\nEnrollments:\n${enrollments}`);
+            })
+            .catch(error => {
+                console.error('Error loading student details:', error);
+                alert('Failed to load student details');
+            });
+        }
+
+        async function deleteStudent(studentId) {
+            if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/students/${studentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Student deleted successfully');
+                    refreshStudents();
+                } else {
+                    alert(result.error || 'Failed to delete student');
+                }
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                alert('Failed to delete student');
+            }
+        }
+
+        // ==================== ORGANIZATIONS ====================
+        async function refreshOrganizations() {
+            try {
+                const response = await fetch('/api/lms/admin/organizations', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayOrganizations(data.organizations || []);
+                } else {
+                    alert('Failed to load organizations');
+                }
+            } catch (error) {
+                console.error('Error loading organizations:', error);
+                alert('Failed to load organizations');
+            }
+        }
+
+        function displayOrganizations(organizations) {
+            const tbody = document.getElementById('organizationsTableBody');
+            
+            if (!organizations || organizations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No organizations found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = organizations.map(org => `
+                <tr>
+                    <td>${org.id}</td>
+                    <td>${escapeHtml(org.name || 'N/A')}</td>
+                    <td>${escapeHtml((org.description || '').substring(0, 50))}${org.description && org.description.length > 50 ? '...' : ''}</td>
+                    <td>${org.teacherCount || 0}</td>
+                    <td>${org.courseCount || 0}</td>
+                    <td><span class="badge bg-${org.isActive ? 'success' : 'secondary'}">${org.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewOrganizationDetails(${org.id})">View</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteOrganization(${org.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewOrganizationDetails(orgId) {
+            fetch(`/api/lms/admin/organizations/${orgId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(response => response.json())
+            .then(org => {
+                alert(`Organization Details:\n\nName: ${org.name}\nDescription: ${org.description || 'N/A'}\nWebsite: ${org.website || 'N/A'}\nTeachers: ${org.teachers?.length || 0}\nCourses: ${org.courses?.length || 0}`);
+            })
+            .catch(error => {
+                console.error('Error loading organization details:', error);
+                alert('Failed to load organization details');
+            });
+        }
+
+        async function deleteOrganization(orgId) {
+            if (!confirm('Are you sure you want to delete this organization? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/api/lms/admin/organizations/${orgId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Organization deleted successfully');
+                    refreshOrganizations();
+                } else {
+                    alert(result.error || 'Failed to delete organization');
+                }
+            } catch (error) {
+                console.error('Error deleting organization:', error);
+                alert('Failed to delete organization');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/ui/auth';
+        }
+    </script>
+</body>
+</html>
+

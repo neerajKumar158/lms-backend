@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LMS - Learning Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         .hero-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -23,18 +24,56 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto d-flex flex-row align-items-center">
                     <li class="nav-item"><a class="nav-link" href="/ui/lms/courses">Browse Courses</a></li>
+                    <li class="nav-item" id="recommendationsNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/recommendations">Recommendations</a></li>
+                    <li class="nav-item" id="wishlistNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/wishlist">Wishlist</a></li>
                     <li class="nav-item" id="loginNavItem"><a class="nav-link" href="/ui/auth">Login</a></li>
                     <li class="nav-item" id="studentDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/student/dashboard">My Dashboard</a></li>
                     <li class="nav-item" id="teacherDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/teacher/dashboard">My Dashboard</a></li>
                     <li class="nav-item" id="orgDashboardNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/organization/dashboard">My Dashboard</a></li>
+                    <li class="nav-item" id="adminAnalyticsNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/admin/analytics">Analytics</a></li>
+                    <li class="nav-item" id="adminCouponsNavItem" style="display: none;"><a class="nav-link" href="/ui/lms/admin/coupons">Coupons</a></li>
                     <li class="nav-item" id="logoutNavItem" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
+                    
+                    <!-- Profile Button -->
+                    <li class="nav-item" id="profileNavItem" style="display: none;">
+                        <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                            <i class="bi bi-person-circle fs-5"></i>
+                        </a>
+                    </li>
+                    
+                    <!-- Notification Bell Icon - Last Item -->
+                    <li class="nav-item" id="notificationNavItem" style="display: none;">
+                        <div class="dropdown">
+                            <button class="btn btn-link text-white position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                                <i class="bi bi-bell fs-5"></i>
+                                <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdownMenu" style="min-width: 350px; max-width: 400px; max-height: 500px; overflow-y: auto;">
+                                <li><h6 class="dropdown-header">Notifications</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li id="notificationListItems">
+                                    <div class="text-center p-3">
+                                        <div class="spinner-border spinner-border-sm" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="/ui/lms/notifications">View All Notifications</a></li>
+                            </ul>
+                        </div>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -54,6 +93,31 @@
             <div class="col-12 text-center">
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5" id="recommendationsSection" style="display: none;">
+        <h2 class="text-center mb-5">Recommended for You</h2>
+        <div id="recommendationsGrid" class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading recommendations...</span>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <a href="/ui/lms/recommendations" class="btn btn-primary">View All Recommendations</a>
+        </div>
+    </div>
+
+    <div class="container my-5" id="trendingSection">
+        <h2 class="text-center mb-5">Trending Courses</h2>
+        <div id="trendingGrid" class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading trending courses...</span>
                 </div>
             </div>
         </div>
@@ -98,14 +162,31 @@
                     document.getElementById('loginNavItem').style.display = 'none';
                     document.getElementById('logoutNavItem').style.display = 'block';
                     
+                    // Show notification and profile icons for logged-in users
+                    document.getElementById('notificationNavItem').style.display = 'block';
+                    document.getElementById('profileNavItem').style.display = 'block';
+                    
                     // Show role-specific dashboard
                     if (currentUserType === 'STUDENT') {
                         document.getElementById('studentDashboardNavItem').style.display = 'block';
+                        document.getElementById('recommendationsNavItem').style.display = 'block';
+                        document.getElementById('wishlistNavItem').style.display = 'block';
                     } else if (currentUserType === 'TEACHER') {
                         document.getElementById('teacherDashboardNavItem').style.display = 'block';
                     } else if (currentUserType === 'ORGANIZATION') {
                         document.getElementById('orgDashboardNavItem').style.display = 'block';
+                    } else if (currentUserType === 'ADMIN') {
+                        document.getElementById('adminAnalyticsNavItem').style.display = 'block';
+                        document.getElementById('adminCouponsNavItem').style.display = 'block';
+                        document.getElementById('teacherDashboardNavItem').style.display = 'block';
                     }
+                    
+                    // Load notifications
+                    loadNotificationDropdown();
+                    updateNotificationBadge();
+                    setInterval(() => {
+                        updateNotificationBadge();
+                    }, 30000); // Update every 30 seconds
                 } else {
                     // Token invalid, clear it
                     localStorage.removeItem('token');
@@ -217,6 +298,100 @@
             }
         }
 
+        async function loadRecommendations() {
+            if (!currentUserType || currentUserType !== 'STUDENT') {
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/lms/recommendations/courses', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const courses = await response.json();
+                    displayRecommendations(courses.slice(0, 3));
+                    document.getElementById('recommendationsSection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+            }
+        }
+
+        async function loadTrendingCourses() {
+            try {
+                const response = await fetch('/api/lms/recommendations/trending?limit=6');
+
+                if (response.ok) {
+                    const courses = await response.json();
+                    displayTrendingCourses(courses);
+                }
+            } catch (error) {
+                console.error('Error loading trending courses:', error);
+            }
+        }
+
+        function displayRecommendations(courses) {
+            const container = document.getElementById('recommendationsGrid');
+            
+            if (!courses || courses.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted text-center">No recommendations available.</p></div>';
+                return;
+            }
+
+            container.innerHTML = courses.map(course => `
+                <div class="col-md-4 mb-4">
+                    <div class="card course-card h-100">
+                        ${course.thumbnailUrl ? 
+                            `<img src="${escapeHtml(course.thumbnailUrl)}" class="card-img-top" style="height: 200px; object-fit: cover;">` :
+                            `<div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <span class="text-white">No Image</span>
+                            </div>`
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">${escapeHtml(course.title || 'Untitled')}</h5>
+                            <p class="card-text text-muted" style="min-height: 60px;">${escapeHtml((course.description || '').substring(0, 100))}...</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h5 mb-0 text-primary">₹${parseFloat(course.price || 0).toFixed(2)}</span>
+                                <a href="/ui/lms/courses/${course.id}" class="btn btn-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayTrendingCourses(courses) {
+            const container = document.getElementById('trendingGrid');
+            
+            if (!courses || courses.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted text-center">No trending courses available.</p></div>';
+                return;
+            }
+
+            container.innerHTML = courses.map(course => `
+                <div class="col-md-4 mb-4">
+                    <div class="card course-card h-100">
+                        ${course.thumbnailUrl ? 
+                            `<img src="${escapeHtml(course.thumbnailUrl)}" class="card-img-top" style="height: 200px; object-fit: cover;">` :
+                            `<div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <span class="text-white">No Image</span>
+                            </div>`
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">${escapeHtml(course.title || 'Untitled')}</h5>
+                            <p class="card-text text-muted" style="min-height: 60px;">${escapeHtml((course.description || '').substring(0, 100))}...</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h5 mb-0 text-primary">₹${parseFloat(course.price || 0).toFixed(2)}</span>
+                                <a href="/ui/lms/courses/${course.id}" class="btn btn-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function loadFeaturedCourses() {
             try {
                 const response = await fetch('/api/lms/courses/featured');
@@ -253,10 +428,143 @@
             }
         }
         
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Notification functions
+        async function loadNotificationDropdown() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/notifications/unread', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const notifications = await response.json();
+                    displayNotificationDropdown(notifications.slice(0, 5));
+                    updateNotificationBadge(notifications.length);
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function displayNotificationDropdown(notifications) {
+            const container = document.getElementById('notificationListItems');
+            if (!container) return;
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="text-center p-3 text-muted">No new notifications</div>';
+                return;
+            }
+
+            container.innerHTML = notifications.map(notif => {
+                const icon = getNotificationIcon(notif.type);
+                const date = new Date(notif.createdAt).toLocaleString();
+                return `
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="handleNotificationClick(${notif.id}, '${notif.actionUrl || ''}'); return false;">
+                            <div class="d-flex align-items-start">
+                                <i class="bi ${icon} me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold small">${escapeHtml(notif.title || 'Notification')}</div>
+                                    <div class="text-muted small">${escapeHtml((notif.message || '').substring(0, 50))}${notif.message && notif.message.length > 50 ? '...' : ''}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">${date}</div>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'INFO': 'bi-info-circle',
+                'SUCCESS': 'bi-check-circle',
+                'WARNING': 'bi-exclamation-triangle',
+                'ERROR': 'bi-x-circle',
+                'ASSIGNMENT': 'bi-file-earmark-text',
+                'QUIZ': 'bi-question-circle',
+                'ANNOUNCEMENT': 'bi-megaphone',
+                'CERTIFICATE': 'bi-award'
+            };
+            return icons[type] || 'bi-bell';
+        }
+
+        async function handleNotificationClick(notificationId, actionUrl) {
+            const token = localStorage.getItem('token');
+            try {
+                await fetch(`/api/lms/notifications/${notificationId}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            } catch (err) {
+                console.error('Error marking as read:', err);
+            }
+
+            const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('notificationDropdown'));
+            if (dropdown) dropdown.hide();
+
+            if (actionUrl && actionUrl.trim() !== '') {
+                window.location.href = actionUrl;
+            } else {
+                loadNotificationDropdown();
+            }
+        }
+
+        async function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            if (count === undefined) {
+                try {
+                    const response = await fetch('/api/lms/notifications/unread/count', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        count = data.count || 0;
+                    }
+                } catch (error) {
+                    console.error('Error updating badge:', error);
+                    return;
+                }
+            }
+
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Load notifications when dropdown is opened
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('show.bs.dropdown', function() {
+                    loadNotificationDropdown();
+                });
+            }
+        });
+
         checkUserRole().then(() => {
             loadRoleSpecificFeatures();
+            loadRecommendations();
         });
         loadFeaturedCourses();
+        loadTrendingCourses();
     </script>
 </body>
 </html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .course-card {
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        .course-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/ui/lms/courses">Browse Courses</a>
+                <a class="nav-link" href="/ui/lms/recommendations">Recommendations</a>
+                <a class="nav-link active" href="/ui/lms/wishlist">My Wishlist</a>
+                <a class="nav-link" href="/ui/lms/student/dashboard">Dashboard</a>
+                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4">My Wishlist</h1>
+
+        <div id="wishlistContainer" class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        async function loadWishlist() {
+            try {
+                const response = await fetch('/api/lms/wishlist', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load wishlist');
+                }
+
+                const wishlist = await response.json();
+                displayWishlist(wishlist);
+            } catch (error) {
+                console.error('Error loading wishlist:', error);
+                document.getElementById('wishlistContainer').innerHTML = 
+                    '<div class="col-12"><div class="alert alert-danger">Failed to load wishlist.</div></div>';
+            }
+        }
+
+        function displayWishlist(wishlist) {
+            const container = document.getElementById('wishlistContainer');
+            
+            if (!wishlist || wishlist.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <h5>Your wishlist is empty</h5>
+                            <p>Start adding courses to your wishlist to save them for later!</p>
+                            <a href="/ui/lms/courses" class="btn btn-primary">Browse Courses</a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = wishlist.map(item => {
+                const course = item.course;
+                return `
+                    <div class="col-md-4 mb-4">
+                        <div class="card course-card">
+                            ${course.thumbnailUrl ? 
+                                `<img src="${escapeHtml(course.thumbnailUrl)}" class="card-img-top" alt="${escapeHtml(course.title || 'Course')}" style="height: 200px; object-fit: cover;">` :
+                                `<div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <span class="text-white">No Image</span>
+                                </div>`
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">${escapeHtml(course.title || 'Untitled Course')}</h5>
+                                <p class="card-text text-muted" style="min-height: 60px; overflow: hidden; text-overflow: ellipsis;">
+                                    ${escapeHtml((course.description || '').substring(0, 100))}${course.description && course.description.length > 100 ? '...' : ''}
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="h5 mb-0 text-primary">₹${parseFloat(course.price || 0).toFixed(2)}</span>
+                                    <div>
+                                        <a href="/ui/lms/courses/${course.id}" class="btn btn-primary btn-sm">View</a>
+                                        <button class="btn btn-danger btn-sm" onclick="removeFromWishlist(${course.id})">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function removeFromWishlist(courseId) {
+            if (!confirm('Remove this course from your wishlist?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/lms/wishlist/course/${courseId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    loadWishlist(); // Reload wishlist
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to remove from wishlist');
+                }
+            } catch (error) {
+                console.error('Error removing from wishlist:', error);
+                alert('Failed to remove from wishlist');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/ui/auth';
+        }
+
+        // Load wishlist on page load
+        loadWishlist();
+    </script>
+</body>
+</html>
+

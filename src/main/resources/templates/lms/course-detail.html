@@ -27,7 +27,11 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -317,6 +321,33 @@
             const isFree = isCourseFree(price);
             const loggedIn = isLoggedIn();
             
+            // Load offers for this course
+            let offerHtml = '';
+            let finalPrice = price;
+            let discountAmount = 0;
+            
+            if (!isFree) {
+                try {
+                    const offerResponse = await fetch(`/api/lms/offers/course/${courseId}/best`);
+                    if (offerResponse.ok) {
+                        const offerData = await offerResponse.json();
+                        if (offerData.hasOffer) {
+                            finalPrice = offerData.finalPrice;
+                            discountAmount = offerData.discountAmount;
+                            offerHtml = `
+                                <div class="alert alert-success mb-3">
+                                    <strong>🎉 Special Offer!</strong><br>
+                                    ${escapeHtml(offerData.offer.title)}<br>
+                                    <small>Save ₹${parseFloat(discountAmount).toFixed(2)}</small>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading offers:', error);
+                }
+            }
+            
             // Check enrollment status if logged in
             let isEnrolled = false;
             if (loggedIn) {
@@ -331,6 +362,27 @@
                     }
                 } catch (error) {
                     console.error('Error checking enrollment:', error);
+                }
+            }
+            
+            // Check wishlist status
+            let wishlistButton = '';
+            if (loggedIn && !isEnrolled) {
+                try {
+                    const wishlistResponse = await fetch(`/api/lms/wishlist/course/${courseId}/check`, {
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                    });
+                    if (wishlistResponse.ok) {
+                        const wishlistData = await wishlistResponse.json();
+                        const isInWishlist = wishlistData.inWishlist;
+                        wishlistButton = `
+                            <button class="btn btn-outline-danger w-100 mb-2" onclick="toggleWishlist(${courseId})">
+                                ${isInWishlist ? '❤️ Remove from Wishlist' : '♡ Add to Wishlist'}
+                            </button>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error checking wishlist:', error);
                 }
             }
             
@@ -354,26 +406,123 @@
                 `;
             } else {
                 enrollSection = `
+                    ${offerHtml}
                     <div class="alert alert-warning">
                         <strong>Paid Course</strong><br>
-                        Price: <strong>₹${price}</strong>
+                        ${discountAmount > 0 ? 
+                            `Price: <span class="text-decoration-line-through text-muted">₹${price}</span> <span class="text-success fw-bold">₹${parseFloat(finalPrice).toFixed(2)}</span>` :
+                            `Price: <strong>₹${price}</strong>`}
                     </div>
-                    ${!loggedIn ? 
-                        '<a href="/ui/auth" class="btn btn-primary w-100">Login to Purchase</a>' :
-                        '<button class="btn btn-warning w-100" onclick="proceedToPayment()">Proceed to Payment</button>'}
+                    ${wishlistButton}
+                    ${loggedIn ? `
+                        <div id="couponSection" class="mb-3">
+                            <label class="form-label small">Have a coupon code?</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-sm" id="couponCode" placeholder="Enter coupon code">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" onclick="applyCoupon()">Apply</button>
+                            </div>
+                            <div id="couponMessage" class="mt-2"></div>
+                        </div>
+                        <button class="btn btn-warning w-100" onclick="proceedToPayment()" id="buyButton">
+                            Buy Now ${discountAmount > 0 ? `- ₹${parseFloat(finalPrice).toFixed(2)}` : ''}
+                        </button>
+                    ` : '<a href="/ui/auth" class="btn btn-primary w-100">Login to Purchase</a>'}
                 `;
             }
             
             document.getElementById('courseDetails').innerHTML = `
-                <p><strong>Price:</strong> ${isFree ? 
-                    '<span class="text-success">FREE</span>' : 
-                    `₹${price}`}</p>
+                <p><strong>Instructor:</strong> ${course.instructor ? escapeHtml(course.instructor.name || course.instructor.email) : 'Unknown'}</p>
+                <p><strong>Category:</strong> ${course.category ? escapeHtml(course.category.name) : 'Uncategorized'}</p>
                 <p><strong>Level:</strong> ${course.level || 'BEGINNER'}</p>
                 ${course.durationHours ? `<p><strong>Duration:</strong> ${course.durationHours} hours</p>` : ''}
                 ${course.language ? `<p><strong>Language:</strong> ${course.language}</p>` : ''}
                 <hr>
                 ${enrollSection}
             `;
+        }
+        
+        let appliedCoupon = null;
+        
+        async function applyCoupon() {
+            const couponCode = document.getElementById('couponCode').value.trim();
+            const messageDiv = document.getElementById('couponMessage');
+            
+            if (!couponCode) {
+                messageDiv.innerHTML = '<small class="text-danger">Please enter a coupon code</small>';
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/lms/coupons/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        couponCode: couponCode,
+                        courseId: courseId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    appliedCoupon = couponCode;
+                    messageDiv.innerHTML = `<small class="text-success">✓ Coupon applied! Discount: ₹${parseFloat(result.discountAmount).toFixed(2)}</small>`;
+                    // Update buy button with new price
+                    const finalPrice = parseFloat(courseData.price) - parseFloat(result.discountAmount);
+                    document.getElementById('buyButton').textContent = `Buy Now - ₹${finalPrice.toFixed(2)}`;
+                } else {
+                    appliedCoupon = null;
+                    messageDiv.innerHTML = `<small class="text-danger">${escapeHtml(result.message || 'Invalid coupon')}</small>`;
+                }
+            } catch (error) {
+                console.error('Error applying coupon:', error);
+                messageDiv.innerHTML = '<small class="text-danger">Failed to validate coupon</small>';
+            }
+        }
+        
+        async function toggleWishlist(courseId) {
+            if (!isLoggedIn()) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                // Check current status
+                const checkResponse = await fetch(`/api/lms/wishlist/course/${courseId}/check`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (checkResponse.ok) {
+                    const data = await checkResponse.json();
+                    const isInWishlist = data.inWishlist;
+                    const url = `/api/lms/wishlist/course/${courseId}`;
+                    const method = isInWishlist ? 'DELETE' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (response.ok) {
+                        // Reload course details to update button
+                        await displayCourseDetails(courseData);
+                    } else {
+                        alert('Failed to update wishlist');
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling wishlist:', error);
+                alert('Failed to update wishlist');
+            }
+        }
+        
+        function proceedToPayment() {
+            initiatePayment();
         }
         
         async function loadLectures(courseId, course) {
@@ -507,12 +656,14 @@
             
             try {
                 const token = localStorage.getItem('token');
+                const requestBody = appliedCoupon ? { couponCode: appliedCoupon } : null;
                 const response = await fetch(`/api/lms/payments/create-order/${courseId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: requestBody ? JSON.stringify(requestBody) : undefined
                 });
                 
                 const result = await response.json();

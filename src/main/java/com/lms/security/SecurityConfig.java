@@ -115,6 +115,28 @@ public class SecurityConfig {
                         // Payment endpoints (authenticated users)
                         .requestMatchers("/api/lms/payments/**").authenticated()
                         
+                        // Coupon and Offer endpoints
+                        .requestMatchers("/api/lms/coupons/active", "GET").permitAll() // Public: view active coupons
+                        .requestMatchers("/api/lms/coupons/validate", "POST").authenticated() // Authenticated: validate coupon
+                        .requestMatchers("/api/lms/coupons", "POST", "PUT", "DELETE").hasRole("ADMIN") // Admin: manage coupons
+                        .requestMatchers("/api/lms/coupons/**", "PUT", "DELETE").hasRole("ADMIN") // Admin: manage coupons
+                        .requestMatchers("/api/lms/offers/active", "GET").permitAll() // Public: view active offers
+                        .requestMatchers("/api/lms/offers/course/**", "GET").permitAll() // Public: view offers for course
+                        .requestMatchers("/api/lms/offers", "POST", "PUT", "DELETE").hasRole("ADMIN") // Admin: manage offers
+                        .requestMatchers("/api/lms/offers/**", "PUT", "DELETE").hasRole("ADMIN") // Admin: manage offers
+                        
+                        // Recommendations and Wishlist
+                        .requestMatchers("/api/lms/recommendations/**").authenticated()
+                        .requestMatchers("/api/lms/wishlist/**").authenticated()
+                        
+                        // Refunds
+                        .requestMatchers("/api/lms/refunds/my-refunds", "GET").authenticated() // Students: view their refunds
+                        .requestMatchers("/api/lms/refunds/request/**", "POST").authenticated() // Students: request refund
+                        .requestMatchers("/api/lms/refunds/pending", "GET").hasRole("ADMIN") // Admin: view pending refunds
+                        .requestMatchers("/api/lms/refunds/all", "GET").hasRole("ADMIN") // Admin: view all refunds
+                        .requestMatchers("/api/lms/refunds/**/approve", "POST").hasRole("ADMIN") // Admin: approve refund
+                        .requestMatchers("/api/lms/refunds/**/reject", "POST").hasRole("ADMIN") // Admin: reject refund
+                        
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

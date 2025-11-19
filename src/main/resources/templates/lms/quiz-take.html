@@ -58,7 +58,11 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
             <div class="navbar-nav ms-auto d-flex flex-row">
                 <a class="nav-link me-3" href="/ui/lms">Home</a>
                 <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>

@@ -9,7 +9,11 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
             <div class="navbar-nav ms-auto d-flex flex-row">
                 <a class="nav-link me-3" href="/ui/lms">Home</a>
                 <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
@@ -101,12 +105,32 @@
             return div.innerHTML;
         }
         
-        function displayCourses(courses) {
+        async function displayCourses(courses) {
             const grid = document.getElementById('coursesGrid');
             
             if (!courses || courses.length === 0) {
                 grid.innerHTML = '<div class="col-12 text-center"><p>No courses found.</p></div>';
                 return;
+            }
+            
+            const token = localStorage.getItem('token');
+            const wishlistStatuses = {};
+            
+            // Check wishlist status for all courses if logged in
+            if (token) {
+                await Promise.all(courses.map(async (course) => {
+                    try {
+                        const response = await fetch(`/api/lms/wishlist/course/${course.id}/check`, {
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            wishlistStatuses[course.id] = data.inWishlist;
+                        }
+                    } catch (error) {
+                        console.error('Error checking wishlist:', error);
+                    }
+                }));
             }
             
             grid.innerHTML = courses.map(course => {
@@ -115,10 +139,22 @@
                 const title = course.title || 'Untitled Course';
                 const description = course.description ? course.description.substring(0, 150) + '...' : 'No description available';
                 const level = course.level || 'N/A';
+                const isInWishlist = wishlistStatuses[course.id] || false;
+                const wishlistButton = token ? `
+                    <button class="btn btn-sm ${isInWishlist ? 'btn-danger' : 'btn-outline-danger'} mb-2" onclick="toggleWishlist(${course.id}, this)">
+                        ${isInWishlist ? '❤️ Remove' : '♡ Add to Wishlist'}
+                    </button>
+                ` : '';
                 
                 return `
                     <div class="col-md-4 mb-4">
-                        <div class="card h-100">
+                        <div class="card h-100 position-relative">
+                            ${course.thumbnailUrl ? 
+                                `<img src="${escapeHtml(course.thumbnailUrl)}" class="card-img-top" style="height: 200px; object-fit: cover;">` :
+                                `<div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <span class="text-white">No Image</span>
+                                </div>`
+                            }
                             <div class="card-body">
                                 <h5 class="card-title">${escapeHtml(title)}</h5>
                                 <p class="card-text">${escapeHtml(description)}</p>
@@ -126,12 +162,70 @@
                                 <p class="${isFree ? 'text-success' : 'text-primary'} fw-bold">
                                     ${isFree ? 'FREE' : '₹' + price}
                                 </p>
-                                <a href="/ui/lms/courses/${course.id}" class="btn btn-primary">View Details</a>
+                                ${wishlistButton}
+                                <a href="/ui/lms/courses/${course.id}" class="btn btn-primary w-100">View Details</a>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+        
+        async function toggleWishlist(courseId, button) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/ui/auth';
+                return;
+            }
+            
+            const isInWishlist = button.textContent.includes('Remove');
+            const url = `/api/lms/wishlist/course/${courseId}`;
+            const method = isInWishlist ? 'DELETE' : 'POST';
+            
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    if (isInWishlist) {
+                        button.textContent = '♡ Add to Wishlist';
+                        button.classList.remove('btn-danger');
+                        button.classList.add('btn-outline-danger');
+                    } else {
+                        button.textContent = '❤️ Remove';
+                        button.classList.remove('btn-outline-danger');
+                        button.classList.add('btn-danger');
+                    }
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to update wishlist');
+                }
+            } catch (error) {
+                console.error('Error toggling wishlist:', error);
+                alert('Failed to update wishlist');
+            }
+        }
+
+        async function checkUserAndShowNav() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/api/profile', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (response.ok) {
+                        const user = await response.json();
+                        if (user.userType === 'STUDENT') {
+                            document.getElementById('recommendationsNav').style.display = 'block';
+                            document.getElementById('wishlistNav').style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking user:', error);
+                }
+            }
         }
 
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -140,6 +234,7 @@
             }
         });
 
+        checkUserAndShowNav();
         loadCourses();
     </script>
 </body>

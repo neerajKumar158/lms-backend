@@ -32,7 +32,17 @@ public class CoursePaymentService {
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
 
+    @Autowired
+    private CouponService couponService;
+
+    @Autowired
+    private CourseOfferService offerService;
+
     public Map<String, Object> createPaymentOrder(Long studentId, Long courseId) {
+        return createPaymentOrder(studentId, courseId, null);
+    }
+
+    public Map<String, Object> createPaymentOrder(Long studentId, Long courseId, String couponCode) {
         UserAccount student = userAccountRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         Course course = courseRepository.findById(courseId)
@@ -42,18 +52,62 @@ public class CoursePaymentService {
             throw new RuntimeException("Course is free. No payment required.");
         }
 
+        BigDecimal originalPrice = course.getPrice();
+        BigDecimal finalPrice = originalPrice;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Coupon appliedCoupon = null;
+        CourseOffer appliedOffer = null;
+
+        // Apply coupon if provided
+        if (couponCode != null && !couponCode.trim().isEmpty()) {
+            CouponService.CouponValidationResult validation = couponService.validateCoupon(
+                    couponCode, courseId, studentId);
+            
+            if (!validation.isValid()) {
+                return Map.of("error", validation.getMessage());
+            }
+            
+            appliedCoupon = validation.getCoupon();
+            discountAmount = validation.getDiscountAmount();
+            finalPrice = originalPrice.subtract(discountAmount);
+            if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                finalPrice = BigDecimal.ZERO;
+            }
+        } else {
+            // If no coupon, check for active offers
+            Optional<CourseOffer> offerOpt = offerService.getBestOfferForCourse(courseId);
+            if (offerOpt.isPresent()) {
+                CourseOffer offer = offerOpt.get();
+                appliedOffer = offer;
+                discountAmount = offer.calculateDiscount(originalPrice);
+                finalPrice = originalPrice.subtract(discountAmount);
+                if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                    finalPrice = BigDecimal.ZERO;
+                }
+            }
+        }
+
         // Create payment record
         CoursePayment payment = new CoursePayment();
         payment.setStudent(student);
         payment.setCourse(course);
-        payment.setAmount(course.getPrice());
+        payment.setOriginalAmount(originalPrice);
+        payment.setDiscountAmount(discountAmount);
+        payment.setAmount(finalPrice);
+        payment.setCoupon(appliedCoupon);
+        payment.setOffer(appliedOffer);
         payment.setStatus("PENDING");
         payment.setCreatedAt(LocalDateTime.now());
         payment = paymentRepository.save(payment);
 
-        // Create Razorpay order
+        // If coupon was applied, record the usage
+        if (appliedCoupon != null) {
+            couponService.applyCoupon(appliedCoupon, student, course, payment);
+        }
+
+        // Create Razorpay order with final price
         Map<String, Object> razorpayOrder = razorpayService.createOrder(
-                course.getPrice(),
+                finalPrice,
                 "INR",
                 payment.getId().toString(),
                 student.getName() != null ? student.getName() : "Student",
@@ -79,6 +133,16 @@ public class CoursePaymentService {
         response.put("razorpayOrderId", razorpayOrderId); // Add this for frontend
         response.put("userEmail", student.getEmail());
         response.put("userName", student.getName());
+        response.put("originalPrice", originalPrice);
+        response.put("discountAmount", discountAmount);
+        response.put("finalPrice", finalPrice);
+        if (appliedCoupon != null) {
+            response.put("couponCode", appliedCoupon.getCode());
+            response.put("couponName", appliedCoupon.getName());
+        }
+        if (appliedOffer != null) {
+            response.put("offerTitle", appliedOffer.getTitle());
+        }
         
         return response;
     }

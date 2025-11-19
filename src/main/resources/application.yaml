@@ -53,7 +53,7 @@ app:
   email-verification-enabled: ${EMAIL_VERIFICATION_ENABLED:false}  # Set to true in production
   teacher:
     registration-enabled: ${TEACHER_REGISTRATION_ENABLED:false}  # Enable/disable teacher registration (default: true)
-    login-enabled: ${TEACHER_LOGIN_ENABLED:false}  # Enable/disable teacher login (default: true)
+    login-enabled: ${TEACHER_LOGIN_ENABLED:true}  # Enable/disable teacher login (default: true)
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

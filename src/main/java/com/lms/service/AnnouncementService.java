@@ -3,6 +3,7 @@ package com.lms.service;
 import com.lms.domain.Course;
 import com.lms.domain.CourseAnnouncement;
 import com.lms.domain.CourseEnrollment;
+import com.lms.domain.Notification;
 import com.lms.domain.UserAccount;
 import com.lms.repository.CourseAnnouncementRepository;
 import com.lms.repository.CourseEnrollmentRepository;
@@ -32,6 +33,9 @@ public class AnnouncementService {
 
     @Autowired
     private UserAccountRepository userAccountRepository;
+
+    @Autowired(required = false)
+    private NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<CourseAnnouncement> getAnnouncementsByCourse(Long courseId) {
@@ -117,7 +121,44 @@ public class AnnouncementService {
             System.err.println("Failed to send announcement emails: " + e.getMessage());
         }
         
+        // Notify teachers in the organization when an announcement is created
+        notifyTeachersAboutAnnouncement(course, saved);
+        
         return saved;
+    }
+
+    /**
+     * Notify teachers in the organization about a new announcement
+     */
+    private void notifyTeachersAboutAnnouncement(Course course, CourseAnnouncement announcement) {
+        if (notificationService == null || course.getOrganization() == null) {
+            return;
+        }
+
+        try {
+            // Get all teachers in the organization
+            List<UserAccount> teachers = userAccountRepository.findByOrganizationId(course.getOrganization().getId());
+            
+            for (UserAccount teacher : teachers) {
+                if (teacher.getUserType() == UserAccount.UserType.TEACHER) {
+                    String message = String.format(
+                        "A new announcement '%s' has been posted for course '%s'.",
+                        announcement.getTitle(),
+                        course.getTitle()
+                    );
+                    notificationService.createNotification(
+                        teacher.getId(),
+                        "New Course Announcement",
+                        message,
+                        Notification.NotificationType.ANNOUNCEMENT,
+                        "/ui/lms/courses/" + course.getId()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to notify teachers about announcement: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Transactional

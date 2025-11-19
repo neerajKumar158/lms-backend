@@ -10,10 +10,24 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/ui/lms">LMS Portal</a>
+            <a class="navbar-brand d-flex align-items-center" href="/ui/lms">
+                <img src="/static/logo.svg" alt="LMS Logo" class="me-2" style="height: 40px; width: auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <span style="display: none; font-size: 1.5rem; font-weight: bold;">📚</span>
+                <span class="ms-2">LMS Portal</span>
+            </a>
             <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
-                <!-- Notification Bell Icon -->
-                <div class="dropdown me-3">
+                <a class="nav-link me-3" href="/ui/lms">Home</a>
+                <a class="nav-link me-3" id="adminAnalyticsLink" href="/ui/lms/admin/analytics" style="display: none;">Analytics</a>
+                <a class="nav-link me-3" id="adminCouponsLink" href="/ui/lms/admin/coupons" style="display: none;">Coupons</a>
+                <a class="nav-link me-3" href="#" onclick="logout(); return false;">Logout</a>
+                
+                <!-- Profile Button -->
+                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
+                    <i class="bi bi-person-circle fs-5"></i>
+                </a>
+                
+                <!-- Notification Bell Icon - Last Item -->
+                <div class="dropdown">
                     <button class="btn btn-link text-white position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
                         <i class="bi bi-bell fs-5"></i>
                         <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
@@ -32,12 +46,6 @@
                         <li><a class="dropdown-item text-center" href="/ui/lms/notifications">View All Notifications</a></li>
                     </ul>
                 </div>
-                <!-- Profile Button -->
-                <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
-                    <i class="bi bi-person-circle fs-5"></i>
-                </a>
-                <a class="nav-link me-3" href="/ui/lms">Home</a>
-                <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
             </div>
         </div>
     </nav>
@@ -619,7 +627,14 @@
                 if (response.ok) {
                     const user = await response.json();
                     const userType = user.userType || user.user_type;
-                    if (userType !== 'TEACHER') {
+                    
+                    // Show admin links if user is admin
+                    if (userType === 'ADMIN') {
+                        document.getElementById('adminAnalyticsLink').style.display = 'block';
+                        document.getElementById('adminCouponsLink').style.display = 'block';
+                    }
+                    
+                    if (userType !== 'TEACHER' && userType !== 'ADMIN') {
                         alert('Access denied. This page is only for teachers.');
                         window.location.href = '/ui/lms';
                         return;
