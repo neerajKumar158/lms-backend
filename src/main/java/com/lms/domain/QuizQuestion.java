@@ -7,44 +7,73 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * QuizQuestion Entity - Phase 1.2
- * Questions within a quiz
+ * Handles questions within quizzes. This entity manages question content,
+ * question types (multiple choice, true/false, essay, etc.), options,
+ * correct answers, and explanations for quiz assessment.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "quiz_questions")
 public class QuizQuestion {
+    /**
+     * Unique identifier for the question
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The quiz this question belongs to
+     */
     @ManyToOne
     @JoinColumn(name = "quiz_id", nullable = false)
     @JsonIgnoreProperties({"questions", "attempts", "course"})
     private Quiz quiz;
 
+    /**
+     * The question text/content
+     */
     @Column(nullable = false, length = 2000)
     private String questionText;
 
+    /**
+     * Type of question: MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, ESSAY, MATCHING, or FILL_BLANK
+     */
     @Column
     @Enumerated(EnumType.STRING)
     private QuestionType type = QuestionType.MULTIPLE_CHOICE;
 
+    /**
+     * Points/marks awarded for this question
+     */
     @Column
-    private Integer marks; // Points for this question
+    private Integer marks;
 
+    /**
+     * Order index of the question within the quiz
+     */
     @Column
-    private Integer orderIndex; // Order of question in quiz
+    private Integer orderIndex;
 
-    // Options for multiple choice, true/false, etc.
+    /**
+     * List of answer options for multiple choice, true/false, etc.
+     */
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<QuizOption> options = new ArrayList<>();
 
-    // Correct answer (for auto-grading)
+    /**
+     * Correct answer identifier (can be option ID, text, etc. for auto-grading)
+     */
     @Column
-    private String correctAnswer; // Can be option ID, text, etc.
+    private String correctAnswer;
 
+    /**
+     * Explanation of the correct answer
+     */
     @Column(length = 2000)
-    private String explanation; // Explanation of correct answer
+    private String explanation;
 
     // Enums
     public enum QuestionType {

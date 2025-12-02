@@ -10,6 +10,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Handles course management and related operations. This service manages course
+ * creation, updates, publishing workflows, lecture management, and study material
+ * organization, providing comprehensive course administration capabilities.
+ *
+ * @author VisionWaves
+ * @version 1.0
+ */
 @Service
 public class CourseService {
 
@@ -28,6 +36,11 @@ public class CourseService {
     @Autowired
     private UserAccountRepository userAccountRepository;
 
+    /**
+     * Retrieves all published courses with initialized relationships.
+     *
+     * @return the list of all published courses
+     */
     @Transactional(readOnly = true)
     public List<Course> getAllPublishedCourses() {
         try {
@@ -51,6 +64,11 @@ public class CourseService {
         }
     }
 
+    /**
+     * Retrieves all free published courses with initialized relationships.
+     *
+     * @return the list of free published courses
+     */
     @Transactional(readOnly = true)
     public List<Course> getFreeCourses() {
         try {
@@ -74,6 +92,11 @@ public class CourseService {
         }
     }
 
+    /**
+     * Retrieves featured published courses, with fallback to regular published courses.
+     *
+     * @return the list of featured published courses
+     */
     @Transactional(readOnly = true)
     public List<Course> getFeaturedCourses() {
         try {
@@ -103,6 +126,12 @@ public class CourseService {
         }
     }
 
+    /**
+     * Searches for published courses matching the keyword in title or description.
+     *
+     * @param keyword the search keyword
+     * @return the list of published courses matching the keyword
+     */
     @Transactional(readOnly = true)
     public List<Course> searchCourses(String keyword) {
         try {
@@ -126,6 +155,12 @@ public class CourseService {
         }
     }
 
+    /**
+     * Retrieves a course by its ID with initialized relationships.
+     *
+     * @param id the course ID
+     * @return the Optional containing the course if found, empty otherwise
+     */
     @Transactional(readOnly = true)
     public Optional<Course> getCourseById(Long id) {
         try {
@@ -150,27 +185,57 @@ public class CourseService {
         }
     }
 
+    /**
+     * Retrieves all courses created by a specific instructor.
+     *
+     * @param instructorId the instructor user ID
+     * @return the list of courses created by the instructor
+     */
     public List<Course> getCoursesByInstructor(Long instructorId) {
         return userAccountRepository.findById(instructorId)
                 .map(courseRepository::findByInstructor)
                 .orElse(List.of());
     }
 
+    /**
+     * Retrieves all courses in a specific category.
+     *
+     * @param categoryId the category ID
+     * @return the list of courses in the category
+     */
     public List<Course> getCoursesByCategory(Long categoryId) {
         return courseRepository.findByCategoryId(categoryId);
     }
 
+    /**
+     * Creates a new course and associates it with an instructor in DRAFT status.
+     *
+     * @param course the course entity to create
+     * @param instructorId the instructor user ID
+     * @return the created course entity
+     */
     @Transactional
     public Course createCourse(Course course, Long instructorId) {
         UserAccount instructor = userAccountRepository.findById(instructorId)
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
         
         course.setInstructor(instructor);
+        // If instructor belongs to an organization, associate course with that organization
+        if (instructor.getOrganization() != null) {
+            course.setOrganization(instructor.getOrganization());
+        }
         course.setStatus(Course.CourseStatus.DRAFT);
         course.setCreatedAt(LocalDateTime.now());
         return courseRepository.save(course);
     }
 
+    /**
+     * Updates an existing course with new information.
+     *
+     * @param courseId the ID of the course to update
+     * @param updatedCourse the course entity containing updated information
+     * @return the updated course entity
+     */
     @Transactional
     public Course updateCourse(Long courseId, Course updatedCourse) {
         Course course = courseRepository.findById(courseId)
@@ -183,9 +248,20 @@ public class CourseService {
         course.setLevel(updatedCourse.getLevel());
         course.setThumbnailUrl(updatedCourse.getThumbnailUrl());
         
+        // Update organization from instructor if not set
+        if (course.getOrganization() == null && course.getInstructor() != null 
+                && course.getInstructor().getOrganization() != null) {
+            course.setOrganization(course.getInstructor().getOrganization());
+        }
+        
         return courseRepository.save(course);
     }
 
+    /**
+     * Publishes a course, changing its status from DRAFT to PUBLISHED.
+     *
+     * @param courseId the ID of the course to publish
+     */
     @Transactional
     public void publishCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
@@ -196,6 +272,11 @@ public class CourseService {
         courseRepository.save(course);
     }
 
+    /**
+     * Unpublishes a course, changing its status from PUBLISHED to DRAFT.
+     *
+     * @param courseId the ID of the course to unpublish
+     */
     @Transactional
     public void unpublishCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
@@ -206,6 +287,11 @@ public class CourseService {
         courseRepository.save(course);
     }
 
+    /**
+     * Deletes a course and all its related entities.
+     *
+     * @param courseId the ID of the course to delete
+     */
     @Transactional
     public void deleteCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
@@ -215,6 +301,11 @@ public class CourseService {
         courseRepository.delete(course);
     }
 
+    /**
+     * Deletes a lecture from a course.
+     *
+     * @param lectureId the ID of the lecture to delete
+     */
     @Transactional
     public void deleteLecture(Long lectureId) {
         Lecture lecture = lectureRepository.findById(lectureId)
@@ -223,6 +314,13 @@ public class CourseService {
         lectureRepository.delete(lecture);
     }
 
+    /**
+     * Adds a new lecture to a course with automatic sequence ordering.
+     *
+     * @param courseId the ID of the course
+     * @param lecture the lecture entity to add
+     * @return the created lecture entity
+     */
     @Transactional
     public Lecture addLectureToCourse(Long courseId, Lecture lecture) {
         Course course = courseRepository.findById(courseId)
@@ -236,6 +334,13 @@ public class CourseService {
         return lectureRepository.save(lecture);
     }
 
+    /**
+     * Adds a study material to a lecture with automatic timestamp.
+     *
+     * @param lectureId the ID of the lecture
+     * @param material the study material entity to add
+     * @return the created study material entity
+     */
     @Transactional
     public StudyMaterial addMaterialToLecture(Long lectureId, StudyMaterial material) {
         Lecture lecture = lectureRepository.findById(lectureId)
@@ -246,18 +351,41 @@ public class CourseService {
         return studyMaterialRepository.save(material);
     }
 
+    /**
+     * Retrieves all lectures for a course, ordered by sequence.
+     *
+     * @param courseId the ID of the course
+     * @return the list of lectures ordered by sequence
+     */
     public List<Lecture> getCourseLectures(Long courseId) {
         return lectureRepository.findByCourseIdOrderBySequenceOrderAsc(courseId);
     }
 
+    /**
+     * Retrieves all study materials for a lecture.
+     *
+     * @param lectureId the ID of the lecture
+     * @return the list of study materials
+     */
     public List<StudyMaterial> getLectureMaterials(Long lectureId) {
         return studyMaterialRepository.findByLectureId(lectureId);
     }
 
+    /**
+     * Retrieves all course categories.
+     *
+     * @return the list of all course categories
+     */
     public List<CourseCategory> getAllCategories() {
         return categoryRepository.findAll();
     }
 
+    /**
+     * Creates a new course category.
+     *
+     * @param category the category entity to create
+     * @return the created category entity
+     */
     public CourseCategory createCategory(CourseCategory category) {
         return categoryRepository.save(category);
     }

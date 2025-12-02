@@ -42,6 +42,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="organizations-tab" data-bs-toggle="tab" data-bs-target="#organizations" type="button">Organizations</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mapping-tab" data-bs-toggle="tab" data-bs-target="#mapping" type="button">User-Org Mapping</button>
+            </li>
         </ul>
 
         <div class="tab-content" id="managementTabsContent">
@@ -138,6 +141,7 @@
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Description</th>
+                                <th>Admin User</th>
                                 <th>Teachers</th>
                                 <th>Courses</th>
                                 <th>Status</th>
@@ -145,9 +149,63 @@
                             </tr>
                         </thead>
                         <tbody id="organizationsTableBody">
-                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                            <tr><td colspan="8" class="text-center">Loading...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- User-Organization Mapping Tab -->
+            <div class="tab-pane fade" id="mapping" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>User-Organization Mapping</h3>
+                    <button class="btn btn-primary" onclick="refreshMappingData()">Refresh</button>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Users Without Organizations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Type</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="usersWithoutOrgTableBody">
+                                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Quick Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-success w-100 mb-2" onclick="showCreateOrgForUserModal()">
+                                    Create Organization for User
+                                </button>
+                                <button class="btn btn-primary w-100 mb-2" onclick="showMapOrgToUserModal()">
+                                    Map Organization to User
+                                </button>
+                                <button class="btn btn-info w-100" onclick="showBulkMappingModal()">
+                                    Bulk Mapping
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -260,6 +318,9 @@
         });
         document.getElementById('organizations-tab').addEventListener('shown.bs.tab', function() {
             refreshOrganizations();
+        });
+        document.getElementById('mapping-tab').addEventListener('shown.bs.tab', function() {
+            refreshMappingData();
         });
 
         // ==================== COURSES ====================
@@ -694,7 +755,7 @@
             const tbody = document.getElementById('organizationsTableBody');
             
             if (!organizations || organizations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No organizations found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No organizations found</td></tr>';
                 return;
             }
 
@@ -703,11 +764,13 @@
                     <td>${org.id}</td>
                     <td>${escapeHtml(org.name || 'N/A')}</td>
                     <td>${escapeHtml((org.description || '').substring(0, 50))}${org.description && org.description.length > 50 ? '...' : ''}</td>
+                    <td>${org.admin ? (org.admin.email || 'N/A') : 'N/A'}</td>
                     <td>${org.teacherCount || 0}</td>
                     <td>${org.courseCount || 0}</td>
                     <td><span class="badge bg-${org.isActive ? 'success' : 'secondary'}">${org.isActive ? 'Active' : 'Inactive'}</span></td>
                     <td>
                         <button class="btn btn-sm btn-primary" onclick="viewOrganizationDetails(${org.id})">View</button>
+                        <button class="btn btn-sm btn-info" onclick="mapOrgToUser(${org.id})">Map to User</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteOrganization(${org.id})">Delete</button>
                     </td>
                 </tr>
@@ -750,6 +813,150 @@
             }
         }
 
+        // ==================== USER-ORGANIZATION MAPPING ====================
+        async function refreshMappingData() {
+            await loadUsersWithoutOrganization();
+        }
+
+        async function loadUsersWithoutOrganization() {
+            try {
+                const response = await fetch('/api/lms/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const users = data.users || [];
+                    // Filter users without organizations
+                    const usersWithoutOrg = users.filter(user => !user.organizationId);
+                    displayUsersWithoutOrg(usersWithoutOrg);
+                } else {
+                    document.getElementById('usersWithoutOrgTableBody').innerHTML = 
+                        '<tr><td colspan="5" class="text-center text-danger">Failed to load users</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersWithoutOrgTableBody').innerHTML = 
+                    '<tr><td colspan="5" class="text-center text-danger">Error loading users</td></tr>';
+            }
+        }
+
+        function displayUsersWithoutOrg(users) {
+            const tbody = document.getElementById('usersWithoutOrgTableBody');
+            
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">All users have organizations</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${escapeHtml(user.name || 'N/A')}</td>
+                    <td>${escapeHtml(user.email || 'N/A')}</td>
+                    <td><span class="badge bg-info">${user.userType || 'N/A'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="createOrgForUser(${user.id}, '${escapeHtml(user.email || '')}')">
+                            Create Org
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showCreateOrgForUserModal() {
+            const userId = prompt('Enter User ID to create organization for:');
+            if (!userId) return;
+            
+            const orgName = prompt('Enter Organization Name:');
+            if (!orgName) return;
+
+            createOrganizationForUser(parseInt(userId), orgName);
+        }
+
+        function createOrgForUser(userId, userEmail) {
+            const orgName = prompt(`Enter Organization Name for ${userEmail}:`, `Organization for ${userEmail}`);
+            if (!orgName) return;
+
+            createOrganizationForUser(userId, orgName);
+        }
+
+        async function createOrganizationForUser(userId, orgName) {
+            try {
+                const response = await fetch(`/api/lms/admin/organizations/create-for-user/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: orgName,
+                        updateUserType: true
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Organization "${result.organizationName}" created successfully for user ID ${userId}`);
+                    refreshMappingData();
+                    refreshOrganizations();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to create organization'));
+                }
+            } catch (error) {
+                console.error('Error creating organization:', error);
+                alert('Failed to create organization: ' + error.message);
+            }
+        }
+
+        function showMapOrgToUserModal() {
+            const orgId = prompt('Enter Organization ID:');
+            if (!orgId) return;
+            
+            const userId = prompt('Enter User ID to map:');
+            if (!userId) return;
+
+            mapOrganizationToUser(parseInt(orgId), parseInt(userId));
+        }
+
+        function mapOrgToUser(orgId) {
+            const userId = prompt('Enter User ID to map to this organization:');
+            if (!userId) return;
+
+            mapOrganizationToUser(orgId, parseInt(userId));
+        }
+
+        async function mapOrganizationToUser(orgId, userId) {
+            try {
+                const response = await fetch(`/api/lms/admin/organizations/${orgId}/map-to-user/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        updateUserType: true
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Organization mapped to user successfully`);
+                    refreshMappingData();
+                    refreshOrganizations();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to map organization'));
+                }
+            } catch (error) {
+                console.error('Error mapping organization:', error);
+                alert('Failed to map organization: ' + error.message);
+            }
+        }
+
+        function showBulkMappingModal() {
+            alert('Bulk mapping feature coming soon. For now, use individual mapping.');
+        }
+
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -764,4 +971,6 @@
     </script>
 </body>
 </html>
+
+
 

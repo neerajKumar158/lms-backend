@@ -11,6 +11,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Handles assignment management and submissions. This service manages assignment
+ * creation, submission processing, grading, late submission handling, and
+ * notification sending for assignment workflow management.
+ *
+ * @author VisionWaves
+ * @version 1.0
+ */
 @Service
 public class AssignmentService {
 
@@ -38,6 +46,12 @@ public class AssignmentService {
     @Autowired
     private CourseEnrollmentRepository enrollmentRepository;
 
+    /**
+     * Retrieves all assignments for a specific course.
+     *
+     * @param courseId the course ID
+     * @return the list of assignments for the course
+     */
     @Transactional(readOnly = true)
     public List<Assignment> getAssignmentsByCourse(Long courseId) {
         System.out.println("Fetching assignments for course: " + courseId);
@@ -58,10 +72,23 @@ public class AssignmentService {
         return assignments != null ? assignments : new java.util.ArrayList<>();
     }
 
+    /**
+     * Retrieves an assignment by its ID.
+     *
+     * @param assignmentId the assignment ID
+     * @return the Optional containing the assignment if found, empty otherwise
+     */
     public Optional<Assignment> getAssignmentById(Long assignmentId) {
         return assignmentRepository.findById(assignmentId);
     }
 
+    /**
+     * Creates a new assignment for a course and sends deadline reminders to enrolled students.
+     *
+     * @param courseId the course ID
+     * @param assignment the assignment entity to create
+     * @return the created assignment entity
+     */
     @Transactional
     public Assignment createAssignment(Long courseId, Assignment assignment) {
         System.out.println("Creating assignment for course: " + courseId);
@@ -107,6 +134,13 @@ public class AssignmentService {
         return saved;
     }
 
+    /**
+     * Updates an existing assignment with new details.
+     *
+     * @param assignmentId the assignment ID
+     * @param updatedAssignment the assignment entity with updated fields
+     * @return the updated assignment entity
+     */
     @Transactional
     public Assignment updateAssignment(Long assignmentId, Assignment updatedAssignment) {
         Assignment assignment = assignmentRepository.findById(assignmentId)
@@ -127,11 +161,24 @@ public class AssignmentService {
         return assignmentRepository.save(assignment);
     }
 
+    /**
+     * Deletes an assignment by its ID.
+     *
+     * @param assignmentId the assignment ID
+     */
     @Transactional
     public void deleteAssignment(Long assignmentId) {
         assignmentRepository.deleteById(assignmentId);
     }
 
+    /**
+     * Submits an assignment for a student with late submission checking and notification.
+     *
+     * @param assignmentId the assignment ID
+     * @param studentId the student user ID
+     * @param submission the submission entity
+     * @return the created submission entity
+     */
     @Transactional
     public AssignmentSubmission submitAssignment(Long assignmentId, Long studentId, AssignmentSubmission submission) {
         Assignment assignment = assignmentRepository.findById(assignmentId)
@@ -185,6 +232,13 @@ public class AssignmentService {
         return saved;
     }
 
+    /**
+     * Updates an existing submission with new content.
+     *
+     * @param submissionId the submission ID
+     * @param updatedSubmission the submission entity with updated fields
+     * @return the updated submission entity
+     */
     @Transactional
     public AssignmentSubmission updateSubmission(Long submissionId, AssignmentSubmission updatedSubmission) {
         AssignmentSubmission submission = submissionRepository.findById(submissionId)
@@ -197,6 +251,14 @@ public class AssignmentService {
         return submissionRepository.save(submission);
     }
 
+    /**
+     * Grades a submission and sends notification to the student.
+     *
+     * @param submissionId the submission ID
+     * @param score the score awarded
+     * @param feedback the feedback provided
+     * @return the graded submission entity
+     */
     @Transactional
     public AssignmentSubmission gradeSubmission(Long submissionId, Integer score, String feedback) {
         AssignmentSubmission submission = submissionRepository.findById(submissionId)
@@ -237,15 +299,34 @@ public class AssignmentService {
         return saved;
     }
 
+    /**
+     * Retrieves all submissions for a specific assignment.
+     *
+     * @param assignmentId the assignment ID
+     * @return the list of submissions for the assignment
+     */
     public List<AssignmentSubmission> getSubmissionsByAssignment(Long assignmentId) {
         return submissionRepository.findByAssignmentId(assignmentId);
     }
 
+    /**
+     * Retrieves all submissions for a specific student.
+     *
+     * @param studentId the student user ID
+     * @return the list of submissions for the student
+     */
     public List<AssignmentSubmission> getStudentSubmissions(Long studentId) {
         return submissionRepository.findByStudent(userAccountRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found")));
     }
 
+    /**
+     * Retrieves a specific submission by assignment and student.
+     *
+     * @param assignmentId the assignment ID
+     * @param studentId the student user ID
+     * @return the Optional containing the submission if found, empty otherwise
+     */
     public Optional<AssignmentSubmission> getSubmission(Long assignmentId, Long studentId) {
         return submissionRepository.findByAssignmentIdAndStudentId(assignmentId, studentId);
     }

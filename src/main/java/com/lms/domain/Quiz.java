@@ -8,70 +8,126 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Quiz/Exam Entity - Phase 1.2
- * Assessment tools for courses
+ * Handles quiz and exam assessments for courses. This entity manages quiz
+ * creation, configuration, question management, attempt tracking, and grading
+ * settings including time limits, attempts, and result visibility.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "quizzes")
 public class Quiz {
+    /**
+     * Unique identifier for the quiz
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The course this quiz belongs to
+     */
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     @JsonIgnoreProperties({"lectures", "enrollments", "liveSessions", "assignments", "quizzes"})
     private Course course;
 
+    /**
+     * Title of the quiz
+     */
     @Column(nullable = false)
     private String title;
 
+    /**
+     * Description of the quiz content
+     */
     @Column(length = 2000)
     private String description;
 
+    /**
+     * Type of quiz: QUIZ, EXAM, ASSIGNMENT, or PRACTICE
+     */
     @Column
     @Enumerated(EnumType.STRING)
     private QuizType type = QuizType.QUIZ;
 
+    /**
+     * Total marks available for the quiz
+     */
     @Column
-    private Integer totalMarks; // Total marks for the quiz
+    private Integer totalMarks;
 
+    /**
+     * Minimum marks required to pass the quiz
+     */
     @Column
-    private Integer passingMarks; // Minimum marks to pass
+    private Integer passingMarks;
 
+    /**
+     * Time limit for completing the quiz in minutes
+     */
     @Column
-    private Integer durationMinutes; // Time limit in minutes
+    private Integer durationMinutes;
 
+    /**
+     * Maximum number of attempts allowed for this quiz
+     */
     @Column
-    private Integer maxAttempts = 1; // Maximum number of attempts allowed
+    private Integer maxAttempts = 1;
 
+    /**
+     * Date and time when the quiz becomes available
+     */
     @Column
-    private LocalDateTime startDate; // When quiz becomes available
+    private LocalDateTime startDate;
 
+    /**
+     * Date and time when the quiz closes
+     */
     @Column
-    private LocalDateTime endDate; // When quiz closes
+    private LocalDateTime endDate;
 
+    /**
+     * Whether to show results immediately after submission
+     */
     @Column
-    private Boolean showResultsImmediately = false; // Show results after submission
+    private Boolean showResultsImmediately = false;
 
+    /**
+     * Whether to shuffle the order of questions
+     */
     @Column
     private Boolean shuffleQuestions = false;
 
+    /**
+     * Whether to shuffle the order of options within questions
+     */
     @Column
     private Boolean shuffleOptions = false;
 
+    /**
+     * Timestamp when the quiz was created
+     */
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * Timestamp when the quiz was last updated
+     */
     @Column
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    // Questions
+    /**
+     * List of questions in the quiz (not serialized in default views)
+     */
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore // Ignored in default serialization, but included in attempt endpoint via Map response
     private List<QuizQuestion> questions = new ArrayList<>();
 
-    // Attempts
+    /**
+     * List of student attempts for this quiz (not serialized in default views)
+     */
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<QuizAttempt> attempts = new ArrayList<>();

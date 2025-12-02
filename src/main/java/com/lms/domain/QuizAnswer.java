@@ -3,35 +3,60 @@ package com.lms.domain;
 import jakarta.persistence.*;
 
 /**
- * QuizAnswer Entity - Phase 1.2
- * Individual answers within a quiz attempt
+ * Handles individual answers within quiz attempts. This entity manages
+ * student responses to quiz questions, including text answers, selected
+ * options, and grading results for each answer.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "quiz_answers")
 public class QuizAnswer {
+    /**
+     * Unique identifier for the answer
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The quiz attempt this answer belongs to
+     */
     @ManyToOne
     @JoinColumn(name = "attempt_id", nullable = false)
     private QuizAttempt attempt;
 
+    /**
+     * The question this answer is for
+     */
     @ManyToOne
     @JoinColumn(name = "question_id", nullable = false)
     private QuizQuestion question;
 
+    /**
+     * Text answer provided by the student
+     */
     @Column(length = 2000)
-    private String answerText; // Student's answer
+    private String answerText;
 
+    /**
+     * ID of the selected option (for multiple choice questions)
+     */
     @Column
-    private Long selectedOptionId; // For multiple choice questions
+    private Long selectedOptionId;
 
+    /**
+     * Marks obtained for this answer
+     */
     @Column
-    private Integer marksObtained; // Marks obtained for this answer
+    private Integer marksObtained;
 
+    /**
+     * Whether the answer is correct
+     */
     @Column
-    private Boolean isCorrect; // Whether answer is correct
+    private Boolean isCorrect;
 
     // Getters and Setters
     public Long getId() { return id; }

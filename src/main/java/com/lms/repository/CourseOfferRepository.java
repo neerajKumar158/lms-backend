@@ -23,3 +23,5 @@ public interface CourseOfferRepository extends JpaRepository<CourseOffer, Long> 
             LocalDateTime now1, LocalDateTime now2);
 }
 
+
+

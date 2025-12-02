@@ -1,8 +1,15 @@
 # Default User Credentials
 
-The application automatically creates two default users on startup. These users are created in the database and persist across application restarts.
+The application automatically creates three default users on startup. These users are created in the database and persist across application restarts.
 
 ## Default Users
+
+### Admin Account
+- **Email:** `admin@lms.com`
+- **Password:** `admin123`
+- **Role:** ADMIN
+- **Name:** System Administrator
+- **Status:** Email verified, Profile completed
 
 ### Teacher Account
 - **Email:** `teacher@lms.com`
@@ -34,6 +41,16 @@ The application automatically creates two default users on startup. These users 
 
 ## Access
 
+- **Admin account** can access:
+  - Admin Management Dashboard (`/ui/lms/admin/manage`)
+  - Admin Analytics (`/ui/lms/admin/analytics`)
+  - Manage all users, courses, teachers, students, and organizations
+  - Create organizations for users
+  - Map users to organizations
+  - Approve/reject teachers
+  - Manage coupons and refunds
+  - Full system access
+
 - **Teacher account** can access:
   - Teacher Dashboard (`/ui/lms/teacher/dashboard`)
   - Create and manage courses
@@ -48,6 +65,8 @@ The application automatically creates two default users on startup. These users 
   - Take quizzes
   - View own report cards
   - Attend live sessions
+
+
 
 
 

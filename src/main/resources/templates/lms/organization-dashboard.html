@@ -51,8 +51,15 @@
     <div class="container my-5">
         <h1 class="mb-4">Organization Dashboard</h1>
         
+        <!-- No Organization Alert -->
+        <div id="noOrganizationAlert" class="alert alert-warning" style="display: none;">
+            <h4>No Organization Found</h4>
+            <p>You don't have an organization yet. Create one to get started!</p>
+            <button class="btn btn-success" onclick="createOrganizationForMe()">Create My Organization</button>
+        </div>
+        
         <!-- Stats Cards -->
-        <div class="row mb-4">
+        <div class="row mb-4" id="statsCards" style="display: none;">
             <div class="col-md-3">
                 <div class="card text-center">
                     <div class="card-body">
@@ -88,7 +95,7 @@
         </div>
 
         <!-- Tabs -->
-        <ul class="nav nav-tabs mb-3" id="orgTabs" role="tablist">
+        <ul class="nav nav-tabs mb-3" id="orgTabs" role="tablist" style="display: none;">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="teachers-tab" data-bs-toggle="tab" data-bs-target="#teachers" type="button">
                     Teachers
@@ -106,7 +113,7 @@
             </li>
         </ul>
 
-        <div class="tab-content" id="orgTabContent">
+        <div class="tab-content" id="orgTabContent" style="display: none;">
             <!-- Teachers Tab -->
             <div class="tab-pane fade show active" id="teachers" role="tabpanel">
                 <div class="d-flex justify-content-between mb-3">
@@ -186,25 +193,67 @@
             }
 
             try {
-                // Load organization info
-                const userResponse = await fetch('/api/profile', {
+                // Check if organization exists
+                const orgResponse = await fetch('/api/lms/organization', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 
-                if (!userResponse.ok) {
-                    throw new Error('Not authenticated');
+                if (orgResponse.status === 404) {
+                    // No organization found - show create button
+                    document.getElementById('noOrganizationAlert').style.display = 'block';
+                    document.getElementById('statsCards').style.display = 'none';
+                    document.getElementById('orgTabs').style.display = 'none';
+                    document.getElementById('orgTabContent').style.display = 'none';
+                    return;
                 }
                 
-                const user = await userResponse.json();
+                if (!orgResponse.ok) {
+                    throw new Error('Failed to load organization');
+                }
+                
+                // Organization exists - show dashboard
+                document.getElementById('noOrganizationAlert').style.display = 'none';
+                document.getElementById('statsCards').style.display = 'flex';
+                document.getElementById('orgTabs').style.display = 'block';
+                document.getElementById('orgTabContent').style.display = 'block';
                 
                 // Load organization data
-                // Note: These endpoints need to be created in OrganizationController
                 loadTeachers();
                 loadCourses();
                 loadStudents();
                 loadStats();
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+                document.getElementById('noOrganizationAlert').style.display = 'block';
+            }
+        }
+
+        async function createOrganizationForMe() {
+            const orgName = prompt('Enter Organization Name:', 'My Organization');
+            if (!orgName || !orgName.trim()) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/lms/organization/create-for-me', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: orgName.trim() })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Organization created successfully! Refreshing dashboard...');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to create organization'));
+                }
+            } catch (error) {
+                console.error('Error creating organization:', error);
+                alert('Failed to create organization: ' + error.message);
             }
         }
 
@@ -218,13 +267,15 @@
                     const teachers = await response.json();
                     displayTeachers(teachers);
                 } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Error loading teachers:', errorData);
                     document.getElementById('teachersList').innerHTML = 
-                        '<div class="alert alert-info">No teachers found. Add teachers to get started.</div>';
+                        '<div class="alert alert-warning">Error: ' + escapeHtml(errorData.error || 'Unable to load teachers') + '</div>';
                 }
             } catch (error) {
                 console.error('Error loading teachers:', error);
                 document.getElementById('teachersList').innerHTML = 
-                    '<div class="alert alert-warning">Unable to load teachers. Please try again.</div>';
+                    '<div class="alert alert-warning">Unable to load teachers: ' + escapeHtml(error.message) + '</div>';
             }
         }
 
@@ -238,13 +289,15 @@
                     const courses = await response.json();
                     displayCourses(courses);
                 } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Error loading courses:', errorData);
                     document.getElementById('coursesList').innerHTML = 
-                        '<div class="alert alert-info">No courses found.</div>';
+                        '<div class="alert alert-warning">Error: ' + escapeHtml(errorData.error || 'Unable to load courses') + '</div>';
                 }
             } catch (error) {
                 console.error('Error loading courses:', error);
                 document.getElementById('coursesList').innerHTML = 
-                    '<div class="alert alert-warning">Unable to load courses.</div>';
+                    '<div class="alert alert-warning">Unable to load courses: ' + escapeHtml(error.message) + '</div>';
             }
         }
 
@@ -258,13 +311,15 @@
                     const students = await response.json();
                     displayStudents(students);
                 } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Error loading students:', errorData);
                     document.getElementById('studentsList').innerHTML = 
-                        '<div class="alert alert-info">No students found.</div>';
+                        '<div class="alert alert-warning">Error: ' + escapeHtml(errorData.error || 'Unable to load students') + '</div>';
                 }
             } catch (error) {
                 console.error('Error loading students:', error);
                 document.getElementById('studentsList').innerHTML = 
-                    '<div class="alert alert-warning">Unable to load students.</div>';
+                    '<div class="alert alert-warning">Unable to load students: ' + escapeHtml(error.message) + '</div>';
             }
         }
 
@@ -280,9 +335,22 @@
                     document.getElementById('coursesCount').textContent = stats.coursesCount || 0;
                     document.getElementById('studentsCount').textContent = stats.studentsCount || 0;
                     document.getElementById('enrollmentsCount').textContent = stats.enrollmentsCount || 0;
+                } else {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    console.error('Error loading stats:', errorData);
+                    // Set counts to 0 on error
+                    document.getElementById('teachersCount').textContent = '0';
+                    document.getElementById('coursesCount').textContent = '0';
+                    document.getElementById('studentsCount').textContent = '0';
+                    document.getElementById('enrollmentsCount').textContent = '0';
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
+                // Set counts to 0 on error
+                document.getElementById('teachersCount').textContent = '0';
+                document.getElementById('coursesCount').textContent = '0';
+                document.getElementById('studentsCount').textContent = '0';
+                document.getElementById('enrollmentsCount').textContent = '0';
             }
         }
 

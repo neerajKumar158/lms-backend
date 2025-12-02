@@ -6,45 +6,76 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * ForumPost Entity
- * Individual posts/replies within a forum thread
+ * Handles individual posts and replies within forum threads. This entity
+ * manages post content, nested replies, edit tracking, and post ordering
+ * for threaded discussions in course forums.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "forum_posts")
 public class ForumPost {
+    /**
+     * Unique identifier for the post
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The thread this post belongs to
+     */
     @ManyToOne
     @JoinColumn(name = "thread_id", nullable = false)
     @JsonIgnore
     private ForumThread thread;
 
+    /**
+     * The user who created the post
+     */
     @ManyToOne
     @JoinColumn(name = "author_id", nullable = false)
     @JsonIgnoreProperties({"passwordHash", "roles", "emailVerificationToken"})
     private UserAccount author;
 
+    /**
+     * Content/body of the post
+     */
     @Column(length = 10000, nullable = false)
     private String content;
 
+    /**
+     * Parent post if this is a nested reply
+     */
     @ManyToOne
     @JoinColumn(name = "parent_post_id")
     @JsonIgnoreProperties({"thread", "parentPost", "replies"})
-    private ForumPost parentPost; // For nested replies
+    private ForumPost parentPost;
 
+    /**
+     * List of replies to this post (ordered by creation date)
+     */
     @OneToMany(mappedBy = "parentPost", cascade = CascadeType.ALL)
     @OrderBy("createdAt ASC")
     @JsonIgnore
     private java.util.List<ForumPost> replies = new java.util.ArrayList<>();
 
+    /**
+     * Whether the post has been edited
+     */
     @Column(nullable = false)
     private Boolean isEdited = false;
 
+    /**
+     * Timestamp when the post was created
+     */
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * Timestamp when the post was last updated
+     */
     @Column
     private LocalDateTime updatedAt = LocalDateTime.now();
 

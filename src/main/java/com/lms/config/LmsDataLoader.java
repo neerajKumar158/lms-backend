@@ -42,6 +42,10 @@ public class LmsDataLoader implements CommandLineRunner {
         System.out.println("Initializing default users and sample data...");
 
         try {
+            // Create default admin user
+            UserAccount admin = createDefaultAdmin();
+            System.out.println("Default admin created: " + admin.getEmail() + " / Password: admin123");
+            
             // Create default teacher user
             UserAccount teacher = createDefaultTeacher();
             System.out.println("Default teacher created: " + teacher.getEmail() + " / Password: teacher123");
@@ -114,6 +118,29 @@ public class LmsDataLoader implements CommandLineRunner {
             System.err.println("Error loading sample data: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private UserAccount createDefaultAdmin() {
+        if (userAccountRepository.findByEmail("admin@lms.com").isPresent()) {
+            return userAccountRepository.findByEmail("admin@lms.com").get();
+        }
+
+        UserAccount admin = new UserAccount();
+        admin.setEmail("admin@lms.com");
+        admin.setPasswordHash(passwordEncoder.encode("admin123"));
+        admin.setName("System Administrator");
+        admin.setPhone("+1234567899");
+        admin.setUserType(UserAccount.UserType.ADMIN);
+        admin.setEmailVerified(true);
+        admin.setProfileCompleted(true);
+        admin.setBio("System administrator with full access to the LMS platform.");
+        
+        Set<String> roles = new HashSet<>();
+        roles.add("ROLE_ADMIN");
+        roles.add("ROLE_USER");
+        admin.setRoles(roles);
+        
+        return userAccountRepository.save(admin);
     }
 
     private UserAccount createDefaultTeacher() {

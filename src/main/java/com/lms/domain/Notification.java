@@ -4,39 +4,70 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Notification Entity
- * System notifications for users
+ * Handles system notifications for users. This entity manages notification
+ * creation, delivery, read status tracking, notification types, and action
+ * URLs for user engagement and system communication.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "notifications")
 public class Notification {
+    /**
+     * Unique identifier for the notification
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The user who receives this notification
+     */
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserAccount user;
 
+    /**
+     * Title of the notification
+     */
     @Column(nullable = false, length = 200)
     private String title;
 
+    /**
+     * Message content of the notification
+     */
     @Column(length = 1000)
     private String message;
 
+    /**
+     * Type of notification: INFO, SUCCESS, WARNING, ERROR, ASSIGNMENT, QUIZ, ANNOUNCEMENT, or CERTIFICATE
+     */
     @Column
     @Enumerated(EnumType.STRING)
     private NotificationType type = NotificationType.INFO;
 
+    /**
+     * Whether the notification has been read by the user
+     */
     @Column
     private Boolean isRead = false;
 
+    /**
+     * URL to navigate to when the notification is clicked
+     */
     @Column
-    private String actionUrl; // URL to navigate when clicked
+    private String actionUrl;
 
+    /**
+     * Timestamp when the notification was created
+     */
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * Timestamp when the notification was read
+     */
     @Column
     private LocalDateTime readAt;
 

@@ -337,6 +337,41 @@ public class AdminController {
     // ==================== STUDENT MANAGEMENT ====================
 
     /**
+     * Get all users (admin only)
+     */
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers(@AuthenticationPrincipal User principal) {
+        if (!isAdmin(principal)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied. Admin role required."));
+        }
+
+        List<Map<String, Object>> users = userAccountRepository.findAll().stream()
+                .map(u -> {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", u.getId());
+                    userMap.put("email", u.getEmail());
+                    userMap.put("name", u.getName() != null ? u.getName() : "");
+                    userMap.put("phone", u.getPhone() != null ? u.getPhone() : "");
+                    userMap.put("userType", u.getUserType() != null ? u.getUserType().toString() : "null");
+                    userMap.put("emailVerified", u.getEmailVerified());
+                    userMap.put("profileCompleted", u.getProfileCompleted());
+                    userMap.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toString() : "");
+                    // Get organization info
+                    if (u.getOrganization() != null) {
+                        userMap.put("organizationId", u.getOrganization().getId());
+                        userMap.put("organizationName", u.getOrganization().getName());
+                    } else {
+                        userMap.put("organizationId", null);
+                        userMap.put("organizationName", null);
+                    }
+                    return userMap;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(Map.of("users", users));
+    }
+
+    /**
      * Get all students (admin only)
      */
     @GetMapping("/students")
@@ -600,6 +635,16 @@ public class AdminController {
                 orgMap.put("logoUrl", org.getLogoUrl());
                 orgMap.put("isActive", org.getIsActive());
                 orgMap.put("createdAt", org.getCreatedAt());
+                // Get admin info
+                if (org.getAdmin() != null) {
+                    Map<String, Object> adminMap = new HashMap<>();
+                    adminMap.put("id", org.getAdmin().getId());
+                    adminMap.put("email", org.getAdmin().getEmail());
+                    adminMap.put("name", org.getAdmin().getName());
+                    orgMap.put("admin", adminMap);
+                } else {
+                    orgMap.put("admin", null);
+                }
                 // Get counts
                 List<UserAccount> teachers = userAccountRepository.findByOrganizationId(org.getId());
                 List<Course> courses = courseRepository.findByOrganizationId(org.getId());
@@ -699,6 +744,68 @@ public class AdminController {
         }
     }
 
+    /**
+     * Create organization for existing user (admin only)
+     * Useful for mapping existing users to organizations
+     */
+    @PostMapping("/organizations/create-for-user/{userId}")
+    @Transactional
+    public ResponseEntity<?> createOrganizationForUser(
+            @AuthenticationPrincipal User principal,
+            @PathVariable Long userId,
+            @RequestBody MapOrganizationRequest request) {
+        if (!isAdmin(principal)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied. Admin role required."));
+        }
+
+        try {
+            Organization org = organizationService.createOrganizationForExistingUser(
+                    userId,
+                    request.name(),
+                    request.updateUserType() != null ? request.updateUserType() : true
+            );
+            return ResponseEntity.ok(Map.of(
+                    "message", "Organization created and mapped to user successfully",
+                    "organizationId", org.getId(),
+                    "organizationName", org.getName(),
+                    "userId", userId
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Associate existing organization with existing user (admin only)
+     * Useful for mapping existing organizations to existing users
+     */
+    @PostMapping("/organizations/{orgId}/map-to-user/{userId}")
+    @Transactional
+    public ResponseEntity<?> mapOrganizationToUser(
+            @AuthenticationPrincipal User principal,
+            @PathVariable Long orgId,
+            @PathVariable Long userId,
+            @RequestBody(required = false) Map<String, Boolean> request) {
+        if (!isAdmin(principal)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied. Admin role required."));
+        }
+
+        try {
+            boolean updateUserType = request != null && request.containsKey("updateUserType") 
+                    ? request.get("updateUserType") 
+                    : true;
+            
+            organizationService.associateOrganizationWithUser(orgId, userId, updateUserType);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Organization mapped to user successfully",
+                    "organizationId", orgId,
+                    "userId", userId
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ==================== REQUEST/RESPONSE RECORDS ====================
 
     record CreateTeacherRequest(
@@ -723,6 +830,11 @@ public class AdminController {
             String website,
             String logoUrl,
             Boolean isActive
+    ) {}
+
+    record MapOrganizationRequest(
+            String name,
+            Boolean updateUserType
     ) {}
 }
 

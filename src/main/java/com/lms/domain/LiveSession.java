@@ -4,55 +4,105 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Handles live streaming sessions for courses. This entity manages session
+ * scheduling, meeting links, participant management, session status tracking,
+ * and recording URLs for live interactive learning sessions.
+ *
+ * @author VisionWaves
+ * @version 1.0
+ */
 @Entity
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class LiveSession {
+    /**
+     * Unique identifier for the live session
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The course this session belongs to (optional, can be standalone)
+     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "course_id")
     @JsonIgnoreProperties({"lectures", "enrollments", "liveSessions", "assignments", "quizzes", "instructor"})
-    private Course course; // Optional: can be standalone session
+    private Course course;
 
+    /**
+     * The instructor conducting the session
+     */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "instructor_id", nullable = false)
     @JsonIgnoreProperties({"password", "enrollments", "courses", "assignments", "quizAttempts"})
     private UserAccount instructor;
 
+    /**
+     * Title of the live session
+     */
     @Column(nullable = false)
     private String title;
 
+    /**
+     * Description of the live session content
+     */
     @Column(length = 2000)
     private String description;
 
+    /**
+     * Scheduled date and time for the session
+     */
     @Column(nullable = false)
     private LocalDateTime scheduledDateTime;
 
+    /**
+     * Duration of the session in minutes
+     */
     @Column
     private Integer durationMinutes;
 
+    /**
+     * URL to join the meeting (Jitsi Meet room URL or other platform link)
+     */
     @Column
-    private String meetingLink; // Jitsi Meet room URL or other platform link
+    private String meetingLink;
 
+    /**
+     * Unique identifier for the meeting
+     */
     @Column
-    private String meetingId; // Unique meeting identifier
+    private String meetingId;
 
+    /**
+     * Current status of the session: SCHEDULED, ONGOING, COMPLETED, or CANCELLED
+     */
     @Column
-    private String status; // SCHEDULED, ONGOING, COMPLETED, CANCELLED
+    private String status;
 
+    /**
+     * Maximum number of participants allowed in the session
+     */
     @Column
     private Integer maxParticipants;
 
+    /**
+     * Timestamp when the session was started
+     */
     @Column
     private LocalDateTime startedAt;
 
+    /**
+     * Timestamp when the session ended
+     */
     @Column
     private LocalDateTime endedAt;
 
+    /**
+     * URL to the recording of the session (if available)
+     */
     @Column
-    private String recordingUrl; // Optional: link to recording
+    private String recordingUrl;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

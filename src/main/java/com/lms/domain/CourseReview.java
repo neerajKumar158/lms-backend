@@ -4,38 +4,66 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * CourseReview Entity
- * Students can review and rate courses
+ * Handles student reviews and ratings for courses. This entity manages
+ * course feedback, rating system (1-5 stars), review visibility, and
+ * ensures one review per student per course for authentic feedback.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "course_reviews", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"course_id", "student_id"})
 })
 public class CourseReview {
+    /**
+     * Unique identifier for the review
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The course being reviewed
+     */
     @ManyToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
+    /**
+     * The student who wrote the review
+     */
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private UserAccount student;
 
+    /**
+     * Rating given to the course (1-5 stars)
+     */
     @Column(nullable = false)
-    private Integer rating; // 1-5 stars
+    private Integer rating;
 
+    /**
+     * Text content of the review
+     */
     @Column(length = 2000)
     private String reviewText;
 
+    /**
+     * Timestamp when the review was created
+     */
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * Timestamp when the review was last updated
+     */
     @Column
     private LocalDateTime updatedAt;
 
+    /**
+     * Whether the review is visible to other users
+     */
     @Column
     private Boolean isVisible = true;
 

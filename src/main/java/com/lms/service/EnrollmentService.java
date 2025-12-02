@@ -10,6 +10,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Handles student enrollment in courses. This service manages enrollment creation,
+ * progress tracking, completion status, payment verification, and enrollment
+ * notifications for course participation management.
+ *
+ * @author VisionWaves
+ * @version 1.0
+ */
 @Service
 public class EnrollmentService {
 
@@ -28,6 +36,13 @@ public class EnrollmentService {
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
 
+    /**
+     * Checks if a student is enrolled in a specific course.
+     *
+     * @param studentId the student user ID
+     * @param courseId the course ID
+     * @return true if enrolled, false otherwise
+     */
     public boolean isEnrolled(Long studentId, Long courseId) {
         UserAccount student = userAccountRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
@@ -37,6 +52,13 @@ public class EnrollmentService {
         return enrollmentRepository.existsByStudentAndCourse(student, course);
     }
 
+    /**
+     * Enrolls a student in a course with payment verification for paid courses.
+     *
+     * @param studentId the student user ID
+     * @param courseId the course ID
+     * @return the created enrollment entity
+     */
     @Transactional
     public CourseEnrollment enrollStudent(Long studentId, Long courseId) {
         UserAccount student = userAccountRepository.findById(studentId)
@@ -83,12 +105,25 @@ public class EnrollmentService {
         return saved;
     }
 
+    /**
+     * Retrieves all enrollments for a specific student.
+     *
+     * @param studentId the student user ID
+     * @return the list of enrollments for the student
+     */
     public List<CourseEnrollment> getStudentEnrollments(Long studentId) {
         UserAccount student = userAccountRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         return enrollmentRepository.findByStudent(student);
     }
 
+    /**
+     * Retrieves a specific enrollment by student and course.
+     *
+     * @param studentId the student user ID
+     * @param courseId the course ID
+     * @return the Optional containing the enrollment if found, empty otherwise
+     */
     public Optional<CourseEnrollment> getEnrollment(Long studentId, Long courseId) {
         UserAccount student = userAccountRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
@@ -97,6 +132,12 @@ public class EnrollmentService {
         return enrollmentRepository.findByStudentAndCourse(student, course);
     }
 
+    /**
+     * Updates the progress percentage for an enrollment and marks as completed if 100%.
+     *
+     * @param enrollmentId the enrollment ID
+     * @param progressPercentage the progress percentage (0-100)
+     */
     @Transactional
     public void updateProgress(Long enrollmentId, Integer progressPercentage) {
         CourseEnrollment enrollment = enrollmentRepository.findById(enrollmentId)
@@ -113,6 +154,11 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
     }
 
+    /**
+     * Marks an enrollment as completed with 100% progress.
+     *
+     * @param enrollmentId the enrollment ID
+     */
     @Transactional
     public void markAsCompleted(Long enrollmentId) {
         CourseEnrollment enrollment = enrollmentRepository.findById(enrollmentId)

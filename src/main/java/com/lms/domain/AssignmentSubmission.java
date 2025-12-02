@@ -4,46 +4,83 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * AssignmentSubmission Entity - Phase 1.2
- * Student submissions for assignments
+ * Handles student submissions for assignments. This entity manages submission
+ * content (text and files), grading, feedback, and submission status tracking
+ * for assignment evaluation and student assessment.
+ *
+ * @author VisionWaves
+ * @version 1.0
  */
 @Entity
 @Table(name = "assignment_submissions")
 public class AssignmentSubmission {
+    /**
+     * Unique identifier for the submission
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The assignment this submission is for
+     */
     @ManyToOne
     @JoinColumn(name = "assignment_id", nullable = false)
     private Assignment assignment;
 
+    /**
+     * The student who submitted the assignment
+     */
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private UserAccount student;
 
+    /**
+     * Text content of the submission
+     */
     @Column(length = 10000)
-    private String submissionText; // Text submission
+    private String submissionText;
 
+    /**
+     * URL to the submitted file (if file submission)
+     */
     @Column
-    private String submissionFileUrl; // File submission URL
+    private String submissionFileUrl;
 
+    /**
+     * Score awarded for this submission
+     */
     @Column
-    private Integer score; // Graded score
+    private Integer score;
 
+    /**
+     * Feedback provided by the instructor
+     */
     @Column(length = 2000)
-    private String feedback; // Instructor feedback
+    private String feedback;
 
+    /**
+     * Current status of the submission: DRAFT, SUBMITTED, GRADED, RETURNED, or RESUBMITTED
+     */
     @Column
     @Enumerated(EnumType.STRING)
     private SubmissionStatus status = SubmissionStatus.SUBMITTED;
 
+    /**
+     * Timestamp when the submission was submitted
+     */
     @Column(nullable = false)
     private LocalDateTime submittedAt = LocalDateTime.now();
 
+    /**
+     * Timestamp when the submission was graded
+     */
     @Column
     private LocalDateTime gradedAt;
 
+    /**
+     * Whether the submission was submitted after the due date
+     */
     @Column
     private Boolean isLate = false;
 
