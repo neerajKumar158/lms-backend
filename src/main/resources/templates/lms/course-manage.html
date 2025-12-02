@@ -365,7 +365,7 @@
                             <label class="form-label">Upload File *</label>
                             <input type="file" class="form-control" id="materialFile" accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv,.mp3,.wav,.ogg" required>
                             <small class="form-text text-muted">
-                                <span id="fileSizeLimit">Max file size: 50MB (videos: 500MB)</span>
+                                <span id="fileSizeLimit">Max file size: 50MB (videos: 1GB, audio: 200MB)</span>
                             </small>
                             <div id="fileUploadStatus" class="mt-2"></div>
                         </div>
@@ -551,10 +551,10 @@
             
             if (materialType === 'VIDEO') {
                 fileInput.accept = '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv';
-                sizeLimitText.textContent = 'Max file size: 500MB (for videos)';
+                sizeLimitText.textContent = 'Max file size: 1GB (for videos)';
             } else if (materialType === 'AUDIO') {
                 fileInput.accept = '.mp3,.wav,.ogg,.m4a,.aac';
-                sizeLimitText.textContent = 'Max file size: 100MB (for audio)';
+                sizeLimitText.textContent = 'Max file size: 200MB (for audio)';
             } else if (materialType === 'PDF') {
                 fileInput.accept = '.pdf';
                 sizeLimitText.textContent = 'Max file size: 50MB';
@@ -576,9 +576,9 @@
             let maxSize = 50 * 1024 * 1024; // 50MB default
             
             if (materialType === 'VIDEO') {
-                maxSize = 500 * 1024 * 1024; // 500MB for videos
+                maxSize = 1024 * 1024 * 1024; // 1GB for videos
             } else if (materialType === 'AUDIO') {
-                maxSize = 100 * 1024 * 1024; // 100MB for audio
+                maxSize = 200 * 1024 * 1024; // 200MB for audio
             }
 
             if (file.size > maxSize) {
@@ -604,7 +604,7 @@
 
                 // Check for file size error first
                 if (response.status === 413) {
-                    throw new Error('File size exceeds maximum limit (50MB). Please choose a smaller file.');
+                    throw new Error('File size exceeds maximum limit (1GB for videos, 200MB for audio, 50MB for others). Please choose a smaller file.');
                 }
 
                 let result;
@@ -613,7 +613,7 @@
                     responseText = await response.text();
                     if (!responseText || responseText.trim() === '') {
                         if (response.status === 413) {
-                            throw new Error('File size exceeds maximum limit (50MB)');
+                        throw new Error('File size exceeds maximum limit (1GB for videos, 200MB for audio, 50MB for others)');
                         }
                         throw new Error('Empty response from server');
                     }
@@ -625,7 +625,7 @@
                     }
                     // Try to extract error message from HTML or plain text response
                     if (responseText.includes('size') || responseText.includes('exceeded')) {
-                        throw new Error('File size exceeds maximum limit (50MB)');
+                        throw new Error('File size exceeds maximum limit (1GB for videos, 200MB for audio, 50MB for others)');
                     }
                     throw new Error('Server error: ' + response.status + ' ' + response.statusText);
                 }
@@ -641,7 +641,7 @@
                 console.error('Upload error:', error);
                 let errorMessage = 'Upload failed';
                 if (error.message && error.message.includes('size')) {
-                    errorMessage = 'File size exceeds the maximum limit (50MB). Please choose a smaller file.';
+                    errorMessage = 'File size exceeds the maximum limit (1GB for videos, 200MB for audio, 50MB for others). Please choose a smaller file.';
                 } else if (error.message) {
                     errorMessage = 'Upload failed: ' + error.message;
                 }

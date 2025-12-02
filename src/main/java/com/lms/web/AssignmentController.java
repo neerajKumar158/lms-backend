@@ -4,6 +4,7 @@ import com.lms.domain.Assignment;
 import com.lms.domain.AssignmentSubmission;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.AssignmentService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/assignments")
 public class AssignmentController {
@@ -70,7 +72,7 @@ public class AssignmentController {
             
             return ResponseEntity.ok(assignmentsWithStatus);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load assignments with status for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load assignments"));
         }
     }

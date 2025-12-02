@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+            max-height: 800px;
+        }
+        .conversation-list {
+            height: 100%;
+            overflow-y: auto;
+            border-right: 1px solid #dee2e6;
+        }
+        .chat-messages {
+            height: calc(100% - 120px);
+            overflow-y: auto;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+        .message.sent {
+            justify-content: flex-end;
+        }
+        .message.received {
+            justify-content: flex-start;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        .message.sent .message-bubble {
+            background: #007bff;
+            color: white;
+        }
+        .message.received .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+        .message-time {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .conversation-item:hover {
+            background: #f8f9fa;
+        }
+        .conversation-item.active {
+            background: #e7f3ff;
+        }
+        .unread-badge {
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            margin-left: auto;
+        }
+        .chat-input-area {
+            border-top: 1px solid #dee2e6;
+            padding: 15px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/ui/lms">
+                <i class="bi bi-arrow-left"></i> Back to LMS
+            </a>
+            <span class="navbar-text text-white">
+                <i class="bi bi-chat-dots"></i> Messages
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row chat-container">
+            <!-- Conversation List -->
+            <div class="col-md-4 conversation-list">
+                <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <h5 class="mb-0">Conversations</h5>
+                    <button class="btn btn-sm btn-primary" onclick="showNewConversationModal()">
+                        <i class="bi bi-plus-circle"></i> New
+                    </button>
+                </div>
+                <div id="conversationsList">
+                    <div class="text-center p-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="col-md-8 d-flex flex-column">
+                <div id="chatHeader" class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0" id="chatHeaderTitle">Select a conversation to start chatting</h5>
+                        <div id="typingIndicator" class="text-muted small" style="display: none;">
+                            <i class="bi bi-three-dots"></i> <span id="typingText">is typing...</span>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="showSearchModal()" title="Search messages">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="chatMessages" class="chat-messages">
+                    <div class="text-center text-muted p-4">
+                        <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Select a conversation to view messages</p>
+                    </div>
+                </div>
+                <div id="chatInputArea" class="chat-input-area" style="display: none;">
+                    <div id="attachmentPreview" class="mb-2" style="display: none;">
+                        <div class="d-flex align-items-center bg-light p-2 rounded">
+                            <i class="bi bi-paperclip me-2"></i>
+                            <span id="attachmentName" class="flex-grow-1"></span>
+                            <button type="button" class="btn btn-sm btn-link text-danger" onclick="clearAttachment()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <form id="messageForm" onsubmit="sendMessage(event)">
+                        <div class="input-group">
+                            <input type="file" class="d-none" id="fileInput" onchange="handleFileSelect(event)">
+                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()" title="Attach file">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                            <input type="text" class="form-control" id="messageInput" 
+                                   placeholder="Type a message..." 
+                                   oninput="handleTyping()"
+                                   onkeydown="handleKeyDown(event)">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-send"></i> Send
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Messages Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Messages</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="searchKeyword" 
+                               placeholder="Enter search keyword..." onkeyup="if(event.key==='Enter') searchMessages()">
+                    </div>
+                    <div id="searchResults" class="mt-3">
+                        <p class="text-muted text-center">Enter a keyword and press Enter to search</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="searchMessages()">Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Conversation Modal -->
+    <div class="modal fade" id="newConversationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Start New Conversation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select User</label>
+                        <select class="form-select" id="newConversationUser" required>
+                            <option value="">Choose a user...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Course (Optional)</label>
+                        <select class="form-select" id="newConversationCourse">
+                            <option value="">No course (optional)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createNewConversation()">Start Conversation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/ui/auth';
+        }
+
+        let currentConversationId = null;
+        let stompClient = null;
+        let currentUserId = null;
+        let selectedAttachment = null;
+        let typingTimeout = null;
+        let typingSubscription = null;
+
+        // Initialize WebSocket connection
+        function connectWebSocket() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({
+                'Authorization': 'Bearer ' + token
+            }, function(frame) {
+                console.log('Connected: ' + frame);
+                
+                // Subscribe to user's personal message queue
+                if (currentUserId) {
+                    stompClient.subscribe('/queue/messages/' + currentUserId, function(message) {
+                        const msg = JSON.parse(message.body);
+                        if (msg.conversation && msg.conversation.id === currentConversationId) {
+                            displayMessage(msg);
+                            scrollToBottom();
+                        }
+                        // Refresh conversations list to show unread count
+                        loadConversations();
+                    });
+                }
+            }, function(error) {
+                console.error('WebSocket connection error:', error);
+                setTimeout(connectWebSocket, 5000); // Retry after 5 seconds
+            });
+        }
+
+        // Load current user info
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUserId = user.id;
+                    connectWebSocket();
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/lms/messaging/conversations', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const conversations = await response.json();
+                    displayConversations(conversations);
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        // Display conversations list
+        function displayConversations(conversations) {
+            const listDiv = document.getElementById('conversationsList');
+            if (!conversations || conversations.length === 0) {
+                listDiv.innerHTML = '<div class="text-center p-4 text-muted">No conversations yet. Start a new one!</div>';
+                return;
+            }
+
+            listDiv.innerHTML = conversations.map(conv => {
+                if (!conv || !conv.id) return '';
+                
+                const otherUser = (conv.participant1 && conv.participant1.id === currentUserId) ? 
+                    (conv.participant2 || conv.participant1) : 
+                    (conv.participant1 || conv.participant2);
+                
+                if (!otherUser || !otherUser.id) {
+                    console.warn('Invalid conversation data - missing participant:', conv);
+                    return '';
+                }
+                
+                const otherUserName = otherUser.name || otherUser.email || 'Unknown User';
+                const lastMessageTime = conv.lastMessageAt ? 
+                    new Date(conv.lastMessageAt).toLocaleString() : 'No messages';
+                
+                return `
+                    <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}" 
+                         onclick="openConversation(${conv.id}, ${otherUser.id}, '${escapeHtml(otherUserName)}')">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <strong>${escapeHtml(otherUserName)}</strong>
+                                ${conv.course && conv.course.title ? `<br><small class="text-muted">Course: ${escapeHtml(conv.course.title)}</small>` : ''}
+                                <br><small class="text-muted">${lastMessageTime}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).filter(html => html !== '').join('');
+        }
+
+        // Open a conversation
+        async function openConversation(conversationId, otherUserId, otherUserName) {
+            if (!conversationId) {
+                console.error('Invalid conversationId:', conversationId);
+                return;
+            }
+            
+            currentConversationId = conversationId;
+            
+            // Update UI - remove active class from all items
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // If called from click event, mark that item as active
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            
+            // Update header
+            document.getElementById('chatHeaderTitle').textContent = escapeHtml(otherUserName || 'Unknown User');
+            
+            // Show input area
+            document.getElementById('chatInputArea').style.display = 'block';
+            
+            // Load messages
+            await loadMessages(conversationId);
+            
+            // Mark as read
+            await markAsRead(conversationId);
+            
+            // Subscribe to conversation topic for real-time messages
+            if (stompClient && stompClient.connected) {
+                // Unsubscribe from previous conversation if any
+                if (typingSubscription) {
+                    typingSubscription.unsubscribe();
+                }
+                
+                // Subscribe to new messages in this conversation
+                stompClient.subscribe('/topic/conversation/' + conversationId, function(message) {
+                    try {
+                        const msg = JSON.parse(message.body);
+                        console.log('Received new message via WebSocket:', msg);
+                        // Display message (will be filtered by sender in displayMessage if needed)
+                        displayMessage(msg);
+                        scrollToBottom();
+                    } catch (e) {
+                        console.error('Error parsing WebSocket message:', e);
+                    }
+                });
+                
+                // Subscribe to typing indicators
+                typingSubscription = stompClient.subscribe('/topic/conversation/' + conversationId + '/typing', function(data) {
+                    try {
+                        const typingData = JSON.parse(data.body);
+                        if (typingData.userId !== currentUserId) {
+                            if (typingData.isTyping) {
+                                document.getElementById('typingText').textContent = (otherUserName || 'User') + ' is typing...';
+                                document.getElementById('typingIndicator').style.display = 'block';
+                            } else {
+                                document.getElementById('typingIndicator').style.display = 'none';
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing typing indicator:', e);
+                    }
+                });
+                
+                console.log('Subscribed to conversation', conversationId, 'for real-time updates');
+            } else {
+                console.warn('WebSocket not connected, real-time updates disabled');
+            }
+        }
+
+        // Load messages for a conversation
+        async function loadMessages(conversationId) {
+            if (!conversationId) {
+                console.error('Cannot load messages: conversationId is null');
+                return;
+            }
+            
+            try {
+                console.log('Loading messages for conversation:', conversationId);
+                const response = await fetch(`/api/lms/messaging/conversation/${conversationId}/messages`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Failed to load messages. Status:', response.status, 'Response:', errorText);
+                    document.getElementById('chatMessages').innerHTML = 
+                        '<div class="text-center text-danger p-4">Failed to load messages. Please refresh.</div>';
+                    return;
+                }
+                
+                const messages = await response.json();
+                console.log('Loaded messages:', messages?.length || 0, 'messages');
+                displayMessages(messages);
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('chatMessages').innerHTML = 
+                    '<div class="text-center text-danger p-4">Error loading messages: ' + error.message + '</div>';
+            }
+        }
+
+        // Display messages
+        function displayMessages(messages) {
+            const messagesDiv = document.getElementById('chatMessages');
+            if (!messages || messages.length === 0) {
+                messagesDiv.innerHTML = '<div class="text-center text-muted p-4">No messages yet. Start the conversation!</div>';
+                return;
+            }
+
+            messagesDiv.innerHTML = messages.map(msg => formatMessage(msg)).join('');
+            scrollToBottom();
+        }
+
+        // Format a single message
+        function formatMessage(msg) {
+            if (!msg || !msg.id) {
+                console.warn('Invalid message format:', msg);
+                return '';
+            }
+            
+            const senderId = msg.sender && msg.sender.id ? msg.sender.id : null;
+            const isSent = senderId === currentUserId;
+            const sentTime = msg.sentAt ? new Date(msg.sentAt).toLocaleString() : 'Unknown time';
+            const content = msg.content || '';
+            
+            let attachmentHtml = '';
+            if (msg.attachmentUrl) {
+                const isImage = msg.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                if (isImage) {
+                    attachmentHtml = `<img src="${escapeHtml(msg.attachmentUrl)}" class="img-thumbnail mb-2" style="max-width: 300px; cursor: pointer;" onclick="window.open('${escapeHtml(msg.attachmentUrl)}', '_blank')">`;
+                } else {
+                    attachmentHtml = `<div class="mb-2"><a href="${escapeHtml(msg.attachmentUrl)}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> ${escapeHtml(msg.attachmentName || 'Download')}</a></div>`;
+                }
+            }
+            
+            return `
+                <div class="message ${isSent ? 'sent' : 'received'}" data-message-id="${msg.id}">
+                    <div>
+                        ${attachmentHtml}
+                        <div class="message-bubble">${escapeHtml(content)}</div>
+                        <div class="message-time">${sentTime}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display a single message
+        function displayMessage(msg) {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML += formatMessage(msg);
+        }
+
+        // Handle file selection
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                alert('File size must be less than 10MB');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/lms/messaging/attachment/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    selectedAttachment = {
+                        url: data.url,
+                        name: data.name
+                    };
+                    document.getElementById('attachmentName').textContent = data.name;
+                    document.getElementById('attachmentPreview').style.display = 'block';
+                } else {
+                    alert('Failed to upload file');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('Failed to upload file');
+            }
+        }
+        
+        // Clear attachment
+        function clearAttachment() {
+            selectedAttachment = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('attachmentPreview').style.display = 'none';
+        }
+        
+        // Handle typing
+        function handleTyping() {
+            if (!currentConversationId || !stompClient || !stompClient.connected) return;
+            
+            // Send typing indicator
+            if (stompClient && stompClient.connected) {
+                stompClient.send('/app/chat.typing', {}, JSON.stringify({
+                    conversationId: currentConversationId,
+                    isTyping: true
+                }));
+            }
+            
+            // Clear previous timeout
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            
+            // Stop typing after 2 seconds
+            typingTimeout = setTimeout(() => {
+                if (stompClient && stompClient.connected) {
+                    stompClient.send('/app/chat.typing', {}, JSON.stringify({
+                        conversationId: currentConversationId,
+                        isTyping: false
+                    }));
+                }
+            }, 2000);
+        }
+        
+        // Handle key down
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                document.getElementById('messageForm').dispatchEvent(new Event('submit'));
+            }
+        }
+        
+        // Send message
+        async function sendMessage(event) {
+            event.preventDefault();
+            if (!currentConversationId) {
+                console.error('No conversation selected');
+                alert('Please select a conversation first');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content && !selectedAttachment) {
+                console.warn('No content or attachment to send');
+                return;
+            }
+
+            const messageData = {
+                conversationId: currentConversationId,
+                content: content || ''
+            };
+            
+            if (selectedAttachment) {
+                messageData.attachmentUrl = selectedAttachment.url;
+                messageData.attachmentName = selectedAttachment.name;
+            }
+
+            console.log('Sending message:', messageData);
+
+            // Always use HTTP for now to ensure reliability, WebSocket can be added later
+            try {
+                const response = await fetch(`/api/lms/messaging/conversation/${currentConversationId}/message`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: messageData.content,
+                        attachmentUrl: messageData.attachmentUrl || null,
+                        attachmentName: messageData.attachmentName || null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || 'Failed to send message');
+                }
+                
+                const message = await response.json();
+                console.log('Message sent successfully:', message);
+                
+                // Display the message immediately (optimistic update)
+                if (message && message.id) {
+                    displayMessage(message);
+                    scrollToBottom();
+                } else {
+                    console.warn('Invalid message response, reloading messages');
+                    // If message format is invalid, reload all messages
+                    await loadMessages(currentConversationId);
+                }
+                
+                // Also send via WebSocket for real-time delivery to other user
+                if (stompClient && stompClient.connected) {
+                    try {
+                        stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(messageData));
+                        console.log('Message also sent via WebSocket');
+                    } catch (wsError) {
+                        console.warn('WebSocket send failed, but HTTP succeeded:', wsError);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message: ' + (error.message || 'Unknown error'));
+            }
+
+            input.value = '';
+            clearAttachment();
+        }
+
+        // Mark messages as read
+        async function markAsRead(conversationId) {
+            try {
+                await fetch(`/api/lms/messaging/conversation/${conversationId}/read`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+            } catch (error) {
+                console.error('Error marking as read:', error);
+            }
+        }
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Load users for new conversation dropdown
+        async function loadMessagingUsers() {
+            const select = document.getElementById('newConversationUser');
+            // Clear existing options except placeholder
+            select.innerHTML = '<option value=\"\">Choose a user...</option>';
+
+            try {
+                const response = await fetch('/api/lms/messaging/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to load users for messaging, status:', response.status);
+                    alert('Could not load user list for messaging (HTTP ' + response.status + ').');
+                    return;
+                }
+
+                const users = await response.json();
+                if (!users || users.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.disabled = true;
+                    option.textContent = 'No users available to message';
+                    select.appendChild(option);
+                    return;
+                }
+
+                users.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.id;
+                    const labelName = u.name && u.name.trim().length > 0 ? u.name : u.email;
+                    const userType = u.userType ? ` (${u.userType})` : '';
+                    option.textContent = `${labelName}${userType}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading messaging users:', error);
+            }
+        }
+
+        // Load courses for new conversation dropdown
+        async function loadMessagingCourses() {
+            const select = document.getElementById('newConversationCourse');
+            // Clear existing options except placeholder
+            select.innerHTML = '<option value="">No course (optional)</option>';
+
+            try {
+                const response = await fetch('/api/lms/messaging/courses', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to load courses for messaging, status:', response.status);
+                    // Don't show alert for courses since it's optional
+                    return;
+                }
+
+                const courses = await response.json();
+                if (!courses || courses.length === 0) {
+                    return; // Keep the "No course (optional)" option
+                }
+
+                courses.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    const title = c.title && c.title.trim().length > 0 ? c.title : 'Untitled Course';
+                    option.textContent = title;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading messaging courses:', error);
+                // Don't show alert for courses since it's optional
+            }
+        }
+
+        // Show new conversation modal
+        async function showNewConversationModal() {
+            await Promise.all([loadMessagingUsers(), loadMessagingCourses()]);
+            const modal = new bootstrap.Modal(document.getElementById('newConversationModal'));
+            modal.show();
+        }
+
+        // Create new conversation
+        async function createNewConversation() {
+            const userId = document.getElementById('newConversationUser').value;
+            const courseIdSelect = document.getElementById('newConversationCourse');
+            const courseId = courseIdSelect.value;
+            
+            if (!userId) {
+                alert('Please select a user');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/lms/messaging/conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: parseInt(userId),
+                        courseId: courseId && courseId.trim() !== '' ? parseInt(courseId) : null
+                    })
+                });
+                
+                let conversation;
+                try {
+                    conversation = await response.json();
+                } catch (jsonError) {
+                    console.error('Error parsing response JSON:', jsonError);
+                    const text = await response.text();
+                    console.error('Response text:', text);
+                    alert('Invalid response from server. Please check console for details.');
+                    return;
+                }
+                
+                if (response.ok && conversation && conversation.id) {
+                    console.log('Conversation created successfully:', conversation);
+                    const otherUser = conversation.participant1 && conversation.participant1.id === currentUserId ? 
+                        conversation.participant2 : conversation.participant1;
+                    
+                    if (otherUser && otherUser.id) {
+                        const otherUserName = otherUser.name || otherUser.email || 'Unknown User';
+                        await openConversation(conversation.id, otherUser.id, otherUserName);
+                        bootstrap.Modal.getInstance(document.getElementById('newConversationModal')).hide();
+                        loadConversations();
+                    } else {
+                        console.error('Invalid conversation data - missing participant:', conversation);
+                        alert('Conversation created but participant data is missing. Please refresh the page.');
+                    }
+                } else {
+                    const errorMessage = conversation?.error || conversation?.message || 'Failed to create conversation';
+                    console.error('Error creating conversation:', conversation);
+                    alert('Error: ' + errorMessage + (conversation?.details ? '\nDetails: ' + conversation.details : ''));
+                }
+            } catch (error) {
+                console.error('Error creating conversation:', error);
+                alert('Failed to create conversation: ' + (error.message || 'Unknown error'));
+            }
+        }
+
+        // Show search modal
+        function showSearchModal() {
+            if (!currentConversationId) {
+                alert('Please select a conversation first');
+                return;
+            }
+            const modal = new bootstrap.Modal(document.getElementById('searchModal'));
+            modal.show();
+        }
+        
+        // Search messages
+        async function searchMessages() {
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            if (!keyword) {
+                alert('Please enter a search keyword');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/lms/messaging/conversation/${currentConversationId}/search?keyword=${encodeURIComponent(keyword)}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                if (response.ok) {
+                    const messages = await response.json();
+                    const resultsDiv = document.getElementById('searchResults');
+                    if (messages.length === 0) {
+                        resultsDiv.innerHTML = '<p class="text-muted text-center">No messages found</p>';
+                    } else {
+                        resultsDiv.innerHTML = messages.map(msg => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <p class="mb-1">${escapeHtml(msg.content || '')}</p>
+                                    <small class="text-muted">${new Date(msg.sentAt).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error searching messages:', error);
+                alert('Failed to search messages');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize - check for conversationId in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const conversationIdParam = urlParams.get('conversationId');
+        
+        loadCurrentUser();
+        loadConversations();
+        
+        // If conversationId is in URL, open it after loading
+        if (conversationIdParam) {
+            setTimeout(() => {
+                // Find the conversation and open it
+                fetch('/api/lms/messaging/conversations', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                }).then(r => r.json()).then(conversations => {
+                    const conv = conversations.find(c => c.id == conversationIdParam);
+                    if (conv) {
+                        const otherUser = conv.participant1.id === currentUserId ? conv.participant2 : conv.participant1;
+                        openConversation(conv.id, otherUser.id, otherUser.name || otherUser.email);
+                    }
+                });
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
+

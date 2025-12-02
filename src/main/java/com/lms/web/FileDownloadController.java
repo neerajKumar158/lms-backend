@@ -1,5 +1,6 @@
 package com.lms.web;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/files")
 public class FileDownloadController {
@@ -56,8 +58,7 @@ public class FileDownloadController {
                             "attachment; filename=\"" + file.getName() + "\"")
                     .body(resource);
         } catch (Exception e) {
-            System.err.println("Error downloading file: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error downloading file '{}': {}", filename, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -2,11 +2,11 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +15,7 @@ import java.util.Optional;
  * Refund Service
  * Manages refund requests and processing
  */
+@Slf4j
 @Service
 public class RefundService {
 
@@ -125,7 +126,8 @@ public class RefundService {
                     enrollmentRepository.save(enrollment);
                 }
             } catch (Exception e) {
-                System.err.println("Failed to unenroll student after refund: " + e.getMessage());
+                log.error("Failed to unenroll student {} from course {} after refund {}: {}",
+                        refund.getStudent().getId(), refund.getCourse().getId(), refund.getId(), e.getMessage(), e);
             }
         }
 

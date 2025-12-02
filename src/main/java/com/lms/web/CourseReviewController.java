@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.CourseReview;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.CourseReviewService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/reviews")
 public class CourseReviewController {
@@ -47,7 +49,8 @@ public class CourseReviewController {
                     "message", "Review submitted successfully"
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to create/update review for course {} (principal={}): {}",
+                    courseId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -65,7 +68,7 @@ public class CourseReviewController {
                     "summary", summary
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load course reviews for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -76,7 +79,7 @@ public class CourseReviewController {
             Map<String, Object> summary = reviewService.getCourseReviewSummary(courseId);
             return ResponseEntity.ok(summary);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load course review summary for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -96,7 +99,8 @@ public class CourseReviewController {
             reviewService.deleteReview(reviewId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Review deleted successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to delete review {} (principal={}): {}", reviewId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

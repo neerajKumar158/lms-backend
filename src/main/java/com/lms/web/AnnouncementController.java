@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.CourseAnnouncement;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.AnnouncementService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/announcements")
 public class AnnouncementController {
@@ -26,15 +28,12 @@ public class AnnouncementController {
     @GetMapping("/course/{courseId}")
     public ResponseEntity<?> getAnnouncementsByCourse(@PathVariable("courseId") Long courseId) {
         try {
-            System.out.println("Fetching announcements for course: " + courseId);
+            log.debug("Fetching announcements for course {}", courseId);
             List<CourseAnnouncement> announcements = announcementService.getAnnouncementsByCourse(courseId);
-            System.out.println("Returning " + announcements.size() + " announcements for course " + courseId);
-            if (!announcements.isEmpty()) {
-                System.out.println("First announcement: " + announcements.get(0).getTitle());
-            }
+            log.debug("Returning {} announcements for course {}", announcements.size(), courseId);
             return ResponseEntity.ok(announcements);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load announcements for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load announcements"));
         }
     }
@@ -59,7 +58,7 @@ public class AnnouncementController {
             CourseAnnouncement created = announcementService.createAnnouncement(courseId, user.getId(), announcement);
             return ResponseEntity.ok(Map.of("id", created.getId(), "message", "Announcement created successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to create announcement for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to create announcement"));
         }
     }
@@ -75,7 +74,8 @@ public class AnnouncementController {
             announcementService.deleteAnnouncement(id, user.getId());
             return ResponseEntity.ok(Map.of("message", "Announcement deleted successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to delete announcement {} for user {}: {}", id,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to delete announcement"));
         }
     }

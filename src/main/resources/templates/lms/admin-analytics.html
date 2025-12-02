@@ -5,6 +5,335 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Analytics - LMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/ui/lms">LMS Admin</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/ui/lms">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="logout(); return false;">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-4">
+    <h2 class="mb-4"><i class="bi bi-speedometer2"></i> Admin Analytics Dashboard</h2>
+
+    <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Users</h6>
+                    <h3 id="totalUsers">-</h3>
+                    <small>Students, Teachers, Organizations, Admins</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Courses</h6>
+                    <h3 id="totalCourses">-</h3>
+                    <small>Published / Draft / Free / Paid</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-info h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Enrollments</h6>
+                    <h3 id="totalEnrollments">-</h3>
+                    <small>Active vs Completed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Revenue</h6>
+                    <h3 id="totalRevenue">₹0.00</h3>
+                    <small id="paymentsSummary">-</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">User Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Students</span><span id="studentsCount">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Teachers</span><span id="teachersCount">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Organizations</span><span id="organizationsCount">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Admins</span><span id="adminsCount">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Activity (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>New Users</span><span id="newUsers">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>New Enrollments</span><span id="newEnrollments">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>New Courses</span><span id="newCourses">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Revenue (Last 6 Months)</h5>
+                </div>
+                <div class="card-body">
+                    <div id="monthlyRevenueList" class="list-group small">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Platform Activity</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Assignment Submissions</span><span id="assignmentSubmissions">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Quiz Attempts</span><span id="quizAttempts">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Live Sessions</span><span id="liveSessions">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Course Reviews</span><span id="reviewsCount">-</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Top Teachers (by Enrollments/Revenue)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Teacher</th>
+                        <th>Courses</th>
+                        <th>Enrollments</th>
+                        <th>Revenue</th>
+                        <th>Avg Rating</th>
+                    </tr>
+                    </thead>
+                    <tbody id="teachersTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Loading...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = '/ui/auth';
+    }
+
+    function logout() {
+        if (confirm('Are you sure you want to logout?')) {
+            localStorage.removeItem('token');
+            window.location.href = '/ui/lms';
+        }
+    }
+
+    function showError(message) {
+        const alert = document.getElementById('errorAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+    }
+
+    async function loadSystemAnalytics() {
+        try {
+            const response = await fetch('/api/lms/admin/analytics/system', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to load system analytics');
+            }
+
+            const data = await response.json();
+
+            // Users
+            const users = data.users || {};
+            document.getElementById('totalUsers').textContent = users.total ?? 0;
+            document.getElementById('studentsCount').textContent = users.students ?? 0;
+            document.getElementById('teachersCount').textContent = users.teachers ?? 0;
+            document.getElementById('organizationsCount').textContent = users.organizations ?? 0;
+            document.getElementById('adminsCount').textContent = users.admins ?? 0;
+
+            // Courses
+            const courses = data.courses || {};
+            document.getElementById('totalCourses').textContent = courses.total ?? 0;
+
+            // Enrollments
+            const enrollments = data.enrollments || {};
+            document.getElementById('totalEnrollments').textContent = enrollments.total ?? 0;
+
+            // Revenue
+            const revenue = data.revenue || {};
+            const totalRevenue = revenue.total ?? 0;
+            document.getElementById('totalRevenue').textContent = '₹' + Number(totalRevenue).toFixed(2);
+            const paymentsSummary = `Success: ${revenue.successfulPayments ?? 0}, Failed: ${revenue.failedPayments ?? 0}, Pending: ${revenue.pendingPayments ?? 0}`;
+            document.getElementById('paymentsSummary').textContent = paymentsSummary;
+
+            // Activity
+            const activity = data.activity || {};
+            document.getElementById('assignmentSubmissions').textContent = activity.assignmentSubmissions ?? 0;
+            document.getElementById('quizAttempts').textContent = activity.quizAttempts ?? 0;
+            document.getElementById('liveSessions').textContent = activity.liveSessions ?? 0;
+            document.getElementById('reviewsCount').textContent = activity.reviews ?? 0;
+
+            // Recent Activity
+            const recent = data.recentActivity || {};
+            document.getElementById('newUsers').textContent = recent.newUsers ?? 0;
+            document.getElementById('newEnrollments').textContent = recent.newEnrollments ?? 0;
+            document.getElementById('newCourses').textContent = recent.newCourses ?? 0;
+
+            // Monthly revenue
+            const monthlyRevenue = (revenue.monthlyRevenue) || {};
+            const monthlyList = document.getElementById('monthlyRevenueList');
+            monthlyList.innerHTML = '';
+            const entries = Object.entries(monthlyRevenue);
+            if (entries.length === 0) {
+                monthlyList.innerHTML = '<div class="text-muted">No revenue data available.</div>';
+            } else {
+                entries.forEach(([month, amount]) => {
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.innerHTML = `<span>${month}</span><span><strong>₹${Number(amount).toFixed(2)}</strong></span>`;
+                    monthlyList.appendChild(item);
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            showError(err.message || 'Failed to load system analytics');
+        }
+    }
+
+    async function loadTeacherPerformance() {
+        try {
+            const response = await fetch('/api/lms/admin/analytics/teachers', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to load teacher performance');
+            }
+
+            const data = await response.json();
+            const teachers = (data.teachers) || [];
+            const tbody = document.getElementById('teachersTableBody');
+            tbody.innerHTML = '';
+
+            if (teachers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No teacher data available.</td></tr>';
+                return;
+            }
+
+            teachers.forEach((t, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(t.teacherName || '')}<br/><small class="text-muted">${escapeHtml(t.email || '')}</small></td>
+                    <td>${t.totalCourses ?? 0}</td>
+                    <td>${t.totalEnrollments ?? 0}</td>
+                    <td>₹${Number(t.totalRevenue || 0).toFixed(2)}</td>
+                    <td>${Number(t.averageRating || 0).toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error(err);
+            showError(err.message || 'Failed to load teacher performance');
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Load data on page load
+    loadSystemAnalytics();
+    loadTeacherPerformance();
+</script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Analytics - LMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .stat-card {

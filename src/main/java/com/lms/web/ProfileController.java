@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.UserAccount;
 import com.lms.repository.UserAccountRepository;
 import com.lms.security.JwtService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
@@ -17,6 +18,7 @@ import java.util.Map;
  * Profile Controller - Enhanced Profile Management
  * Profile completion and management with all features
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
@@ -79,7 +81,7 @@ public class ProfileController {
             
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load profile for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load profile"));
         }
     }
@@ -112,7 +114,7 @@ public class ProfileController {
             users.save(ua);
             return ResponseEntity.ok(Map.of("success", true, "message", "Profile updated successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to update profile for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to update profile"));
         }
     }
@@ -137,7 +139,7 @@ public class ProfileController {
             
             return ResponseEntity.ok(Map.of("success", true, "avatarUrl", avatarUrl, "message", "Avatar uploaded successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to upload avatar for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to upload avatar"));
         }
     }
@@ -173,7 +175,7 @@ public class ProfileController {
             
             return ResponseEntity.ok(status);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load completion status for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load completion status"));
         }
     }
@@ -192,7 +194,7 @@ public class ProfileController {
             
             return ResponseEntity.ok(verification);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load verification status for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load verification status"));
         }
     }
@@ -220,7 +222,7 @@ public class ProfileController {
             
             return ResponseEntity.ok(subscription);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load subscription info for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load subscription info"));
         }
     }

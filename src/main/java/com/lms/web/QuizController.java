@@ -3,8 +3,11 @@ package com.lms.web;
 import com.lms.domain.Quiz;
 import com.lms.domain.QuizAttempt;
 import com.lms.domain.QuizAnswer;
+import com.lms.domain.QuizOption;
+import com.lms.domain.QuizQuestion;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.QuizService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import com.lms.domain.QuizQuestion;
-import com.lms.domain.QuizOption;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/quizzes")
 public class QuizController {
@@ -34,7 +36,7 @@ public class QuizController {
             List<Quiz> quizzes = quizService.getQuizzesByCourse(courseId);
             return ResponseEntity.ok(quizzes);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load quizzes for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load quizzes"));
         }
     }
@@ -89,7 +91,7 @@ public class QuizController {
             
             return ResponseEntity.ok(quizzesWithStatus);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load quizzes with status for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load quizzes"));
         }
     }
@@ -130,7 +132,7 @@ public class QuizController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load quiz {} for attempt: {}", quizId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load quiz"));
         }
     }
@@ -206,7 +208,7 @@ public class QuizController {
                     "message", "Quiz submitted successfully"
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to submit quiz attempt {}: {}", attemptId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to submit quiz"));
         }
     }
@@ -241,7 +243,7 @@ public class QuizController {
             List<QuizQuestion> questions = quizService.getQuestionsByQuiz(quizId);
             return ResponseEntity.ok(questions);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load quiz questions for quiz {}: {}", quizId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load questions"));
         }
     }
@@ -282,7 +284,7 @@ public class QuizController {
             QuizQuestion created = quizService.addQuestionToQuiz(quizId, question, options);
             return ResponseEntity.ok(Map.of("id", created.getId(), "message", "Question added successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to add question to quiz {}: {}", quizId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -320,10 +322,10 @@ public class QuizController {
             quizService.deleteQuestion(questionId);
             return ResponseEntity.ok(Map.of("message", "Question deleted successfully"));
         } catch (RuntimeException e) {
-            e.printStackTrace();
+            log.error("Failed to delete quiz question {} for quiz {}: {}", questionId, quizId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unexpected error deleting quiz question {} for quiz {}: {}", questionId, quizId, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "An error occurred while deleting the question: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")));
         }
     }

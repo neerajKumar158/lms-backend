@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.UserAccount;
 import com.lms.repository.UserAccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,6 +17,7 @@ import java.util.UUID;
  * Email Verification Service - Phase 2.2
  * Handles email verification for user registration
  */
+@Slf4j
 @Service
 public class EmailVerificationService {
 
@@ -67,7 +69,7 @@ public class EmailVerificationService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            System.err.println("Failed to send verification email: " + e.getMessage());
+            log.error("Failed to send verification email to {}: {}", user.getEmail(), e.getMessage(), e);
             // In development, continue without email
         }
     }

@@ -4,6 +4,7 @@ import com.lms.domain.Course;
 import com.lms.repository.CourseRepository;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.ReportCardService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/report-card")
 public class ReportCardController {
@@ -37,7 +39,7 @@ public class ReportCardController {
             Map<String, Object> reportCard = reportCardService.getStudentReportCard(user.getId());
             return ResponseEntity.ok(reportCard);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load student report card for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load report card"));
         }
     }
@@ -75,10 +77,12 @@ public class ReportCardController {
             Map<String, Object> reportCard = reportCardService.getStudentReportCardForCourse(targetStudentId, courseId);
             return ResponseEntity.ok(reportCard);
         } catch (RuntimeException e) {
-            e.printStackTrace();
+            log.error("Failed to load student report card for course {} (studentId={}, principal={}): {}",
+                    courseId, studentId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load report card"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unexpected error while loading student report card for course {} (studentId={}, principal={}): {}",
+                    courseId, studentId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "An error occurred while loading the report card: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")));
         }
     }
@@ -105,7 +109,8 @@ public class ReportCardController {
             var reportCards = reportCardService.getStudentsReportCardsForCourse(courseId);
             return ResponseEntity.ok(reportCards);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load students' report cards for course {} (principal={}): {}",
+                    courseId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load report cards"));
         }
     }

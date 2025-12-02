@@ -9,6 +9,7 @@ import com.lms.repository.CourseAnnouncementRepository;
 import com.lms.repository.CourseEnrollmentRepository;
 import com.lms.repository.CourseRepository;
 import com.lms.repository.UserAccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class AnnouncementService {
 
@@ -44,7 +46,7 @@ public class AnnouncementService {
             // Get all announcements for the course, then filter out expired ones
             List<CourseAnnouncement> allAnnouncements = announcementRepository.findByCourseIdOrderByCreatedAtDesc(courseId);
             
-            System.out.println("Found " + allAnnouncements.size() + " total announcements for course " + courseId);
+            log.debug("Found {} total announcements for course {}", allAnnouncements.size(), courseId);
             
             // Initialize relationships to avoid lazy loading issues
             if (allAnnouncements != null) {
@@ -66,20 +68,17 @@ public class AnnouncementService {
                         }
                         boolean isActive = announcement.getExpiresAt().isAfter(now);
                         if (!isActive) {
-                            System.out.println("Filtering out expired announcement: " + announcement.getTitle() + " (expired: " + announcement.getExpiresAt() + ")");
+                            log.debug("Filtering out expired announcement: {} (expired: {})",
+                                    announcement.getTitle(), announcement.getExpiresAt());
                         }
                         return isActive;
                     })
                     .collect(java.util.stream.Collectors.toList());
             
-            System.out.println("Returning " + activeAnnouncements.size() + " active announcements for course " + courseId);
-            if (!activeAnnouncements.isEmpty()) {
-                System.out.println("First announcement title: " + activeAnnouncements.get(0).getTitle());
-            }
+            log.debug("Returning {} active announcements for course {}", activeAnnouncements.size(), courseId);
             return activeAnnouncements;
         } catch (Exception e) {
-            System.err.println("Error loading announcements for course " + courseId + ": " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading announcements for course {}: {}", courseId, e.getMessage(), e);
             // Fallback: return all announcements for the course
             return announcementRepository.findByCourseIdOrderByCreatedAtDesc(courseId);
         }
@@ -118,7 +117,8 @@ public class AnnouncementService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to send announcement emails: " + e.getMessage());
+            log.error("Failed to send announcement emails for course {} and announcement {}: {}",
+                    courseId, saved.getId(), e.getMessage(), e);
         }
         
         // Notify teachers in the organization when an announcement is created
@@ -156,8 +156,8 @@ public class AnnouncementService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to notify teachers about announcement: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to notify teachers about announcement {} for course {}: {}",
+                    announcement.getId(), course.getId(), e.getMessage(), e);
         }
     }
 

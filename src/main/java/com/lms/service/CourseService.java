@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.Optional;
  * @author VisionWaves
  * @version 1.0
  */
+@Slf4j
 @Service
 public class CourseService {
 
@@ -58,8 +60,7 @@ public class CourseService {
             }
             return courses;
         } catch (Exception e) {
-            System.err.println("Error loading all published courses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading all published courses: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -86,8 +87,7 @@ public class CourseService {
             }
             return courses;
         } catch (Exception e) {
-            System.err.println("Error loading free courses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading free courses: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -120,8 +120,7 @@ public class CourseService {
             }
             return courses;
         } catch (Exception e) {
-            System.err.println("Error loading featured courses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading featured courses: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -149,8 +148,7 @@ public class CourseService {
             }
             return courses;
         } catch (Exception e) {
-            System.err.println("Error searching courses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error searching courses with keyword '{}': {}", keyword, e.getMessage(), e);
             throw e;
         }
     }
@@ -179,8 +177,7 @@ public class CourseService {
             }
             return courseOpt;
         } catch (Exception e) {
-            System.err.println("Error loading course " + id + ": " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading course {}: {}", id, e.getMessage(), e);
             throw e;
         }
     }

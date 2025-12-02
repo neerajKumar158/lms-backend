@@ -41,7 +41,7 @@ public class AdminAnalyticsController {
         }
     }
 
-    @GetMapping("/teachers/performance")
+    @GetMapping("/teachers")
     public ResponseEntity<?> getTeacherPerformance(@AuthenticationPrincipal User principal) {
         if (!isAdmin(principal)) {
             return ResponseEntity.status(403).body(Map.of("error", "Access denied. Admin role required."));

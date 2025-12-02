@@ -4,6 +4,7 @@ import com.lms.domain.StudyMaterial;
 import com.lms.repository.LectureRepository;
 import com.lms.service.CourseService;
 import com.lms.service.FileUploadService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/files")
 public class FileUploadController {
@@ -103,17 +105,17 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
             }
             
-            // Check file size based on file type (videos can be larger)
+            // Check file size based on file type (videos and audio can be larger)
             String contentType = file.getContentType();
             long maxSize = 50 * 1024 * 1024; // 50MB default
             String maxSizeLabel = "50MB";
             
             if (contentType != null && contentType.startsWith("video/")) {
-                maxSize = 500 * 1024 * 1024; // 500MB for videos
-                maxSizeLabel = "500MB";
+                maxSize = 1024L * 1024L * 1024L; // 1GB for videos
+                maxSizeLabel = "1GB";
             } else if (contentType != null && contentType.startsWith("audio/")) {
-                maxSize = 100 * 1024 * 1024; // 100MB for audio
-                maxSizeLabel = "100MB";
+                maxSize = 200L * 1024L * 1024L; // 200MB for audio
+                maxSizeLabel = "200MB";
             }
             
             if (file.getSize() > maxSize) {
@@ -140,12 +142,13 @@ public class FileUploadController {
                     "message", "File uploaded successfully"
             ));
         } catch (org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+            log.warn("Max upload size exceeded for file '{}' (size={}): {}", file.getOriginalFilename(), file.getSize(), e.getMessage());
             return ResponseEntity.status(413).body(Map.of(
-                "error", "File size exceeds maximum limit (500MB for videos, 100MB for audio, 50MB for others)",
+                "error", "File size exceeds maximum limit (1GB for videos, 200MB for audio, 50MB for others)",
                 "message", "Please choose a smaller file"
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error uploading file '{}' of type '{}': {}", file != null ? file.getOriginalFilename() : "null", type, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of(
                 "error", e.getMessage() != null ? e.getMessage() : "Upload failed",
                 "message", "An error occurred while uploading the file"

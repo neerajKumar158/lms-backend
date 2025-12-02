@@ -216,6 +216,14 @@
             }
         }
         
+        // Optional helper to focus a specific video material (hook for future analytics)
+        function playInlineVideo(fileUrl, title) {
+            // Currently the inline <video> is always visible with controls,
+            // so this function is a no-op placeholder for future enhancements
+            // such as opening a modal player or sending \"video_started\" analytics.
+            console.log('Play video requested for:', title, fileUrl);
+        }
+        
         // Check if course is free
         function isCourseFree(price) {
             return price === 0 || price === '0.00' || price === 0.00 || parseFloat(price) === 0;
@@ -430,6 +438,16 @@
                 `;
             }
             
+            // Message Teacher button (if logged in and instructor exists)
+            let messageTeacherButton = '';
+            if (loggedIn && course.instructor && course.instructor.id) {
+                messageTeacherButton = `
+                    <button class="btn btn-info w-100 mb-2" onclick="messageTeacher(${course.instructor.id}, ${courseId})">
+                        <i class="bi bi-chat-dots"></i> Message Teacher
+                    </button>
+                `;
+            }
+            
             document.getElementById('courseDetails').innerHTML = `
                 <p><strong>Instructor:</strong> ${course.instructor ? escapeHtml(course.instructor.name || course.instructor.email) : 'Unknown'}</p>
                 <p><strong>Category:</strong> ${course.category ? escapeHtml(course.category.name) : 'Uncategorized'}</p>
@@ -437,6 +455,7 @@
                 ${course.durationHours ? `<p><strong>Duration:</strong> ${course.durationHours} hours</p>` : ''}
                 ${course.language ? `<p><strong>Language:</strong> ${course.language}</p>` : ''}
                 <hr>
+                ${messageTeacherButton}
                 ${enrollSection}
             `;
         }
@@ -610,28 +629,63 @@
                         const hasFile = fileUrl && fileUrl.trim() !== '';
                         const isExternalUrl = hasFile && (fileUrl.startsWith('http://') || fileUrl.startsWith('https://'));
                         const isLocalFile = hasFile && fileUrl.startsWith('/uploads/');
-                        
-                        let downloadButton = '';
+                        const type = (material.materialType || '').toUpperCase();
+
+                        let actionButtons = '';
+                        let inlinePlayer = '';
+
                         if (hasFile) {
-                            if (isExternalUrl) {
-                                // External URL - open in new tab
-                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">Open Link</a>`;
+                            if (type === 'VIDEO') {
+                                // Video material
+                                if (isExternalUrl) {
+                                    // External video link (e.g., YouTube/Vimeo)
+                                    actionButtons = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">Play Video</a>`;
+                                } else {
+                                    // Local or relative video file served via /uploads/**
+                                    const safeUrl = escapeHtml(fileUrl);
+                                    actionButtons = `
+                                        <button class="btn btn-sm btn-primary me-2" onclick="playInlineVideo('${safeUrl}', '${escapeHtml(material.title || 'Video')}')">
+                                            Play Video
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="handleDownload(event, '${safeUrl}')">
+                                            Download
+                                        </button>
+                                    `;
+                                    // Optional: small inline player directly under the material item
+                                    inlinePlayer = `
+                                        <div class="mt-2">
+                                            <video controls preload="metadata" style="width: 100%; max-height: 360px; border-radius: 4px;">
+                                                <source src="${safeUrl}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        </div>
+                                    `;
+                                }
+                            } else if (isExternalUrl) {
+                                // Non-video external link
+                                actionButtons = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">Open Link</a>`;
                             } else if (isLocalFile) {
                                 // Local file - use the uploads endpoint with error handling
-                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${escapeHtml(fileUrl)}'); return false;">Download</a>`;
+                                const safeUrl = escapeHtml(fileUrl);
+                                actionButtons = `<a href="${safeUrl}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${safeUrl}'); return false;">Download</a>`;
                             } else {
                                 // Relative path - try to serve it with error handling
-                                downloadButton = `<a href="${escapeHtml(fileUrl)}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${escapeHtml(fileUrl)}'); return false;">Download</a>`;
+                                const safeUrl = escapeHtml(fileUrl);
+                                actionButtons = `<a href="${safeUrl}" class="btn btn-sm btn-primary" onclick="handleDownload(event, '${safeUrl}'); return false;">Download</a>`;
                             }
                         } else {
-                            downloadButton = '<span class="text-muted small">File not available</span>';
+                            actionButtons = '<span class="text-muted small">File not available</span>';
                         }
+                        
+                        const typeBadge = type ? `<span class="badge bg-secondary ms-2">${type}</span>` : '';
                         
                         return `
                             <div class="material-item">
                                 <strong>${escapeHtml(material.title || 'Untitled')}</strong>
+                                ${typeBadge}
                                 <p class="small mb-1">${escapeHtml(material.description || '')}</p>
-                                ${downloadButton}
+                                ${actionButtons}
+                                ${inlinePlayer}
                             </div>
                         `;
                     }).join('')}
@@ -1461,6 +1515,43 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // Message Teacher function
+        async function messageTeacher(teacherId, courseId) {
+            if (!isLoggedIn()) {
+                alert('Please login first to message the teacher.');
+                window.location.href = '/ui/auth';
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                // Get or create conversation with teacher
+                const response = await fetch('/api/lms/messaging/conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: teacherId,
+                        courseId: courseId
+                    })
+                });
+                
+                if (response.ok) {
+                    const conversation = await response.json();
+                    // Redirect to messaging page with conversation ID
+                    window.location.href = `/ui/lms/messaging?conversationId=${conversation.id}`;
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to start conversation'));
+                }
+            } catch (error) {
+                console.error('Error messaging teacher:', error);
+                alert('Failed to start conversation. Please try again.');
+            }
         }
         
         function handleDownload(event, fileUrl) {

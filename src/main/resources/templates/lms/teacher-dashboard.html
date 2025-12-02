@@ -21,6 +21,12 @@
                 <a class="nav-link me-3" id="adminCouponsLink" href="/ui/lms/admin/coupons" style="display: none;">Coupons</a>
                 <a class="nav-link me-3" href="#" onclick="logout(); return false;">Logout</a>
                 
+                <!-- Messages Icon -->
+                <a class="btn btn-link text-white position-relative me-3" href="/ui/lms/messaging" style="text-decoration: none;" title="Messages">
+                    <i class="bi bi-chat-dots fs-5"></i>
+                    <span id="messagesBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+                </a>
+                
                 <!-- Profile Button -->
                 <a class="btn btn-link text-white me-3" href="/ui/lms/profile" style="text-decoration: none;" title="Profile">
                     <i class="bi bi-person-circle fs-5"></i>
@@ -95,7 +101,26 @@
                         <a href="/ui/lms/assignment/manage" class="btn btn-success w-100 mb-2">
                             <i class="bi bi-file-earmark-check"></i> Manage & Grade Assignments
                         </a>
+                        <a href="/ui/lms/messaging" class="btn btn-info w-100 mb-2 position-relative">
+                            <i class="bi bi-chat-dots"></i> Messages
+                            <span id="quickMessagesBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
+                        </a>
                         <a href="/ui/lms" class="btn btn-secondary w-100">Back to Home</a>
+                    </div>
+                </div>
+                
+                <!-- Recent Conversations Card -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Recent Conversations</h5>
+                        <div id="recentConversations" class="list-group list-group-flush">
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="/ui/lms/messaging" class="btn btn-sm btn-outline-primary w-100 mt-2">View All Messages</a>
                     </div>
                 </div>
             </div>
@@ -201,23 +226,22 @@
             }
 
             try {
-                // Get user info first, then load courses
-                const userResponse = await fetch('/api/profile', {
+                // Use backend-authenticated endpoint instead of relying on client-side user ID
+                const response = await fetch('/api/lms/courses/my-courses', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 
-                if (!userResponse.ok) {
-                    throw new Error('Not authenticated');
+                if (response.status === 401) {
+                    // Session expired or not authenticated
+                    localStorage.removeItem('token');
+                    window.location.href = '/ui/auth';
+                    return;
                 }
-                
-                const user = await userResponse.json();
-                // Use instructor endpoint with user ID
-                const response = await fetch(`/api/lms/courses/instructor/${user.id}`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                
+
                 if (!response.ok) {
-                    throw new Error('Failed to load courses');
+                    const errorBody = await response.json().catch(() => ({}));
+                    const message = errorBody.error || errorBody.message || 'Failed to load courses';
+                    throw new Error(message);
                 }
                 
                 const courses = await response.json();
@@ -225,7 +249,7 @@
             } catch (error) {
                 console.error('Error loading courses:', error);
                 document.getElementById('myCoursesList').innerHTML = 
-                    '<div class="alert alert-danger">Failed to load courses. Please login.</div>';
+                    `<div class="alert alert-danger">Failed to load courses: ${error.message || 'Please login again.'}</div>`;
             }
         }
 
@@ -628,6 +652,9 @@
                     const user = await response.json();
                     const userType = user.userType || user.user_type;
                     
+                    // Store current user ID for use in other functions
+                    window.currentUserId = user.id;
+                    
                     // Show admin links if user is admin
                     if (userType === 'ADMIN') {
                         document.getElementById('adminAnalyticsLink').style.display = 'block';
@@ -790,12 +817,124 @@
             }
         });
 
+        // Load unread message count
+        async function updateUnreadMessageBadge() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/messaging/unread-count', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.count || 0;
+                    
+                    // Update navbar badge
+                    const navbarBadge = document.getElementById('messagesBadge');
+                    if (navbarBadge) {
+                        if (count > 0) {
+                            navbarBadge.textContent = count > 99 ? '99+' : count;
+                            navbarBadge.style.display = 'block';
+                        } else {
+                            navbarBadge.style.display = 'none';
+                        }
+                    }
+                    
+                    // Update quick actions badge
+                    const quickBadge = document.getElementById('quickMessagesBadge');
+                    if (quickBadge) {
+                        if (count > 0) {
+                            quickBadge.textContent = count > 99 ? '99+' : count;
+                            quickBadge.style.display = 'block';
+                        } else {
+                            quickBadge.style.display = 'none';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching unread message count:', error);
+            }
+        }
+
+        // Load recent conversations
+        async function loadRecentConversations() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lms/messaging/conversations', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.ok) {
+                    const conversations = await response.json();
+                    displayRecentConversations(conversations.slice(0, 5)); // Show only 5 most recent
+                }
+            } catch (error) {
+                console.error('Error loading recent conversations:', error);
+                document.getElementById('recentConversations').innerHTML = 
+                    '<div class="text-center p-3 text-muted">Failed to load conversations</div>';
+            }
+        }
+
+        // Display recent conversations
+        function displayRecentConversations(conversations) {
+            const container = document.getElementById('recentConversations');
+            if (!container) return;
+
+            if (!conversations || conversations.length === 0) {
+                container.innerHTML = '<div class="text-center p-3 text-muted">No conversations yet</div>';
+                return;
+            }
+
+            container.innerHTML = conversations.map(conv => {
+                if (!conv || !conv.id || !conv.participant1 || !conv.participant2) {
+                    return '';
+                }
+                
+                // Get current user ID from profile or token
+                const currentUserId = window.currentUserId || null;
+                const otherUser = (currentUserId && conv.participant1.id === currentUserId) ? 
+                    conv.participant2 : conv.participant1;
+                
+                const otherUserName = otherUser ? (otherUser.name || otherUser.email || 'Unknown') : 'Unknown';
+                const lastMessageTime = conv.lastMessageAt ? 
+                    new Date(conv.lastMessageAt).toLocaleDateString() : 'No messages';
+                const courseInfo = conv.course ? ` - ${conv.course.title}` : '';
+                
+                return `
+                    <a href="/ui/lms/messaging?conversationId=${conv.id}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${escapeHtml(otherUserName)}${courseInfo ? '<small class="text-muted">' + escapeHtml(courseInfo) + '</small>' : ''}</h6>
+                            <small>${lastMessageTime}</small>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         // Check access before loading data
         checkTeacherAccess().then(() => {
             loadMyCourses();
             updateNotificationBadge();
+            updateUnreadMessageBadge();
+            loadRecentConversations();
             setInterval(() => {
                 updateNotificationBadge();
+                updateUnreadMessageBadge();
                 loadNotificationDropdown();
             }, 30000); // Update every 30 seconds
         });

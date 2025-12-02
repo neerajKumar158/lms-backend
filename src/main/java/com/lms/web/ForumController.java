@@ -4,6 +4,7 @@ import com.lms.domain.ForumPost;
 import com.lms.domain.ForumThread;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.ForumService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/forum")
 public class ForumController {
@@ -30,7 +32,7 @@ public class ForumController {
             List<ForumThread> threads = forumService.getThreadsByCourse(courseId);
             return ResponseEntity.ok(threads);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load threads for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load threads"));
         }
     }
@@ -46,7 +48,7 @@ public class ForumController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load thread {}: {}", threadId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load thread"));
         }
     }
@@ -71,7 +73,8 @@ public class ForumController {
             ForumThread created = forumService.createThread(courseId, user.getId(), thread);
             return ResponseEntity.ok(Map.of("id", created.getId(), "message", "Thread created successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to create thread for course {} (principal={}): {}",
+                    courseId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to create thread"));
         }
     }
@@ -96,7 +99,8 @@ public class ForumController {
             forumService.updateThread(threadId, user.getId(), thread);
             return ResponseEntity.ok(Map.of("message", "Thread updated successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to update thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to update thread"));
         }
     }
@@ -116,7 +120,8 @@ public class ForumController {
             forumService.deleteThread(threadId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Thread deleted successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to delete thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to delete thread"));
         }
     }
@@ -136,7 +141,8 @@ public class ForumController {
             forumService.pinThread(threadId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Thread pinned successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to pin thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to pin thread"));
         }
     }
@@ -156,7 +162,8 @@ public class ForumController {
             forumService.unpinThread(threadId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Thread unpinned successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to unpin thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to unpin thread"));
         }
     }
@@ -176,7 +183,8 @@ public class ForumController {
             forumService.lockThread(threadId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Thread locked successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to lock thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to lock thread"));
         }
     }
@@ -196,7 +204,8 @@ public class ForumController {
             forumService.unlockThread(threadId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Thread unlocked successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to unlock thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to unlock thread"));
         }
     }
@@ -207,7 +216,7 @@ public class ForumController {
             List<ForumPost> posts = forumService.getPostsByThread(threadId);
             return ResponseEntity.ok(posts);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load posts for thread {}: {}", threadId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load posts"));
         }
     }
@@ -231,7 +240,8 @@ public class ForumController {
             ForumPost created = forumService.createPost(threadId, user.getId(), request.parentPostId(), post);
             return ResponseEntity.ok(Map.of("id", created.getId(), "message", "Post created successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to create post in thread {} (principal={}): {}", threadId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to create post"));
         }
     }
@@ -255,7 +265,8 @@ public class ForumController {
             forumService.updatePost(postId, user.getId(), post);
             return ResponseEntity.ok(Map.of("message", "Post updated successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to update post {} (principal={}): {}", postId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to update post"));
         }
     }
@@ -275,7 +286,8 @@ public class ForumController {
             forumService.deletePost(postId, user.getId());
             return ResponseEntity.ok(Map.of("message", "Post deleted successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to delete post {} (principal={}): {}", postId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to delete post"));
         }
     }
@@ -286,7 +298,7 @@ public class ForumController {
             List<ForumPost> replies = forumService.getRepliesByPost(postId);
             return ResponseEntity.ok(replies);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load replies for post {}: {}", postId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load replies"));
         }
     }

@@ -5,6 +5,7 @@ import com.lms.domain.CourseCategory;
 import com.lms.domain.Lecture;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.CourseService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/courses")
 public class CourseController {
@@ -33,8 +35,7 @@ public class CourseController {
             List<Course> courses = courseService.getAllPublishedCourses();
             return ResponseEntity.ok(courses);
         } catch (Exception e) {
-            System.err.println("Error in getAllPublishedCourses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in getAllPublishedCourses: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Failed to load courses",
                 "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
@@ -48,8 +49,7 @@ public class CourseController {
             List<Course> courses = courseService.getFeaturedCourses();
             return ResponseEntity.ok(courses);
         } catch (Exception e) {
-            System.err.println("Error in getFeaturedCourses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in getFeaturedCourses: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Failed to load featured courses",
                 "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
@@ -63,8 +63,7 @@ public class CourseController {
             List<Course> courses = courseService.getFreeCourses();
             return ResponseEntity.ok(courses);
         } catch (Exception e) {
-            System.err.println("Error in getFreeCourses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in getFreeCourses: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Failed to load free courses",
                 "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
@@ -78,8 +77,7 @@ public class CourseController {
             List<Course> courses = courseService.searchCourses(keyword);
             return ResponseEntity.ok(courses);
         } catch (Exception e) {
-            System.err.println("Error in searchCourses: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in searchCourses with keyword '{}': {}", keyword, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "error", "Failed to search courses",
                 "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
@@ -90,19 +88,18 @@ public class CourseController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getCourseById(@PathVariable("id") Long id) {
         try {
-            System.out.println("Loading course with ID: " + id);
+            log.debug("Loading course with ID: {}", id);
             Optional<Course> courseOpt = courseService.getCourseById(id);
             if (courseOpt.isPresent()) {
                 Course course = courseOpt.get();
-                System.out.println("Course found: " + course.getTitle());
+                log.debug("Course found: {}", course.getTitle());
                 return ResponseEntity.ok(course);
             } else {
-                System.out.println("Course not found with ID: " + id);
+                log.debug("Course not found with ID: {}", id);
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            System.err.println("Error in getCourseById: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in getCourseById for ID {}: {}", id, e.getMessage(), e);
             String errorMessage = e.getMessage();
             if (errorMessage == null || errorMessage.isEmpty()) {
                 errorMessage = e.getClass().getSimpleName() + " occurred";

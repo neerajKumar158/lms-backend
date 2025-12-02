@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ReportCardService {
 
@@ -128,12 +130,12 @@ public class ReportCardService {
 
             return courseGrade;
         } catch (RuntimeException e) {
-            System.err.println("Error in getStudentReportCardForCourse: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in getStudentReportCardForCourse (studentId={}, courseId={}): {}",
+                    studentId, courseId, e.getMessage(), e);
             throw e; // Re-throw RuntimeException as-is
         } catch (Exception e) {
-            System.err.println("Unexpected error in getStudentReportCardForCourse: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Unexpected error in getStudentReportCardForCourse (studentId={}, courseId={}): {}",
+                    studentId, courseId, e.getMessage(), e);
             throw new RuntimeException("Failed to generate report card: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"), e);
         }
     }
@@ -178,7 +180,8 @@ public class ReportCardService {
             try {
                 allQuizAttempts = quizAttemptRepository.findByStudent(student);
             } catch (Exception e) {
-                System.err.println("Error fetching quiz attempts: " + e.getMessage());
+                log.error("Error fetching quiz attempts for student {} and course {}: {}",
+                        studentId, courseId, e.getMessage(), e);
                 allQuizAttempts = new ArrayList<>();
             }
             
@@ -201,8 +204,8 @@ public class ReportCardService {
                         }
                     }
                 } catch (Exception e) {
-                    System.err.println("Error filtering quiz attempt: " + e.getMessage());
-                    e.printStackTrace();
+                    log.error("Error filtering quiz attempt for student {} and course {}: {}",
+                            studentId, courseId, e.getMessage(), e);
                     // Skip this attempt
                 }
             }
@@ -212,7 +215,8 @@ public class ReportCardService {
             try {
                 allSubmissions = assignmentSubmissionRepository.findByStudent(student);
             } catch (Exception e) {
-                System.err.println("Error fetching assignment submissions: " + e.getMessage());
+                log.error("Error fetching assignment submissions for student {} and course {}: {}",
+                        studentId, courseId, e.getMessage(), e);
                 allSubmissions = new ArrayList<>();
             }
             
@@ -235,8 +239,8 @@ public class ReportCardService {
                         }
                     }
                 } catch (Exception e) {
-                    System.err.println("Error filtering assignment submission: " + e.getMessage());
-                    e.printStackTrace();
+                    log.error("Error filtering assignment submission for student {} and course {}: {}",
+                            studentId, courseId, e.getMessage(), e);
                     // Skip this submission
                 }
             }
@@ -292,8 +296,8 @@ public class ReportCardService {
                         totalQuizScore += score;
                         totalQuizMaxScore += maxScore;
                     } catch (Exception e) {
-                        System.err.println("Error processing quiz score for quiz " + quiz.getId() + ": " + e.getMessage());
-                        e.printStackTrace();
+                        log.error("Error processing quiz score for quiz {} (studentId={}, courseId={}): {}",
+                                quiz.getId(), studentId, courseId, e.getMessage(), e);
                     }
                 }
             }
@@ -345,8 +349,8 @@ public class ReportCardService {
                             totalAssignmentMaxScore += maxScore;
                         }
                     } catch (Exception e) {
-                        System.err.println("Error processing assignment score: " + e.getMessage());
-                        e.printStackTrace();
+                        log.error("Error processing assignment score for assignment {} (studentId={}, courseId={}): {}",
+                                assignment.getId(), studentId, courseId, e.getMessage(), e);
                     }
                 }
             }
@@ -381,8 +385,8 @@ public class ReportCardService {
 
             return courseGrade;
         } catch (Exception e) {
-            System.err.println("Error in calculateCourseGrade: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error in calculateCourseGrade for student {} and course {}: {}",
+                    studentId, courseId, e.getMessage(), e);
             // Return a minimal report card instead of throwing
             Map<String, Object> errorReport = new HashMap<>();
             errorReport.put("overallScore", 0.0);

@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.Notification;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.NotificationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/notifications")
 public class NotificationController {
@@ -31,7 +33,7 @@ public class NotificationController {
             List<Notification> notifications = notificationService.getUserNotifications(user.getId());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load notifications for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load notifications"));
         }
     }
@@ -45,7 +47,7 @@ public class NotificationController {
             List<Notification> notifications = notificationService.getUnreadNotifications(user.getId());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load unread notifications for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load notifications"));
         }
     }
@@ -59,7 +61,7 @@ public class NotificationController {
             Long count = notificationService.getUnreadCount(user.getId());
             return ResponseEntity.ok(Map.of("count", count));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load unread notification count for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load count"));
         }
     }
@@ -75,7 +77,8 @@ public class NotificationController {
             notificationService.markAsRead(id, user.getId());
             return ResponseEntity.ok(Map.of("message", "Notification marked as read"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to mark notification {} as read for user {}: {}", id,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to mark as read"));
         }
     }
@@ -89,7 +92,7 @@ public class NotificationController {
             notificationService.markAllAsRead(user.getId());
             return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to mark all notifications as read for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to mark all as read"));
         }
     }
@@ -105,7 +108,8 @@ public class NotificationController {
             notificationService.deleteNotification(id, user.getId());
             return ResponseEntity.ok(Map.of("message", "Notification deleted successfully"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to delete notification {} for user {}: {}", id,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to delete notification"));
         }
     }

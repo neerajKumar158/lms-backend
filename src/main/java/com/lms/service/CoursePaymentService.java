@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class CoursePaymentService {
 
@@ -31,6 +33,9 @@ public class CoursePaymentService {
 
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private CouponService couponService;
@@ -179,21 +184,37 @@ public class CoursePaymentService {
             enrollmentService.enrollStudent(payment.getStudent().getId(), payment.getCourse().getId());
         } catch (Exception e) {
             // Enrollment might already exist, which is fine
-            System.err.println("Enrollment error (may already exist): " + e.getMessage());
+            log.warn("Enrollment error after successful payment (may already exist) for student {} and course {}: {}",
+                    payment.getStudent().getId(), payment.getCourse().getId(), e.getMessage());
         }
 
         // Send payment confirmation email
         try {
+            // In-app notification
+            try {
+                notificationService.createNotification(
+                        payment.getStudent().getId(),
+                        "Payment Successful",
+                        "Your payment for the course '" + payment.getCourse().getTitle() + "' has been completed successfully.",
+                        com.lms.domain.Notification.NotificationType.SUCCESS,
+                        "/ui/lms/courses/" + payment.getCourse().getId()
+                );
+            } catch (Exception ex) {
+                log.error("Failed to create payment notification for payment {}: {}",
+                        payment.getId(), ex.getMessage(), ex);
+            }
+
+            // Email notification
             if (emailNotificationService != null) {
                 emailNotificationService.sendPaymentConfirmationEmail(
-                    payment.getStudent().getId(),
-                    payment.getCourse().getTitle(),
-                    payment.getAmount(),
-                    razorpayPaymentId
+                        payment.getStudent().getId(),
+                        payment.getCourse().getTitle(),
+                        payment.getAmount(),
+                        razorpayPaymentId
                 );
             }
         } catch (Exception e) {
-            System.err.println("Failed to send payment confirmation email: " + e.getMessage());
+            log.error("Failed to send payment notifications for payment {}: {}", payment.getId(), e.getMessage(), e);
         }
 
         return true;

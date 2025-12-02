@@ -47,6 +47,12 @@ public class FileUploadConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadPath)
                 .setCachePeriod(3600); // Cache for 1 hour
+        
+        // Create messages upload directory if it doesn't exist
+        File messagesDir = Paths.get("uploads/messages").toFile();
+        if (!messagesDir.exists()) {
+            messagesDir.mkdirs();
+        }
     }
 }
 

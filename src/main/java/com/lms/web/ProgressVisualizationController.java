@@ -2,6 +2,7 @@ package com.lms.web;
 
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.ProgressVisualizationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/progress")
 public class ProgressVisualizationController {
@@ -39,7 +41,8 @@ public class ProgressVisualizationController {
             Map<String, Object> progressData = progressService.getStudentProgressData(targetStudentId, courseId);
             return ResponseEntity.ok(progressData);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load progress data for course {} and student {} (principal={}): {}",
+                    courseId, studentId, principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load progress data"));
         }
     }

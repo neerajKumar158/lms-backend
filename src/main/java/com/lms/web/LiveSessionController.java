@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.LiveSession;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.LiveSessionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/live-sessions")
 public class LiveSessionController {
@@ -55,14 +57,11 @@ public class LiveSessionController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             List<LiveSession> sessions = liveSessionService.getSessionsByInstructor(user.getId());
             
-            System.out.println("Found " + sessions.size() + " sessions for instructor: " + user.getId());
-            if (!sessions.isEmpty()) {
-                System.out.println("First session ID: " + sessions.get(0).getId() + ", Title: " + sessions.get(0).getTitle());
-            }
+            log.debug("Found {} sessions for instructor {}", sessions.size(), user.getId());
             
             return ResponseEntity.ok(sessions);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load instructor sessions for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -71,10 +70,10 @@ public class LiveSessionController {
     public ResponseEntity<?> getSessionsByCourse(@PathVariable("courseId") Long courseId) {
         try {
             List<LiveSession> sessions = liveSessionService.getSessionsByCourse(courseId);
-            System.out.println("Found " + sessions.size() + " sessions for course: " + courseId);
+            log.debug("Found {} sessions for course {}", sessions.size(), courseId);
             return ResponseEntity.ok(sessions);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load live sessions for course {}: {}", courseId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -110,7 +109,7 @@ public class LiveSessionController {
             LocalDateTime scheduledDateTime;
             try {
                 String dateTimeStr = request.scheduledDateTime().trim();
-                System.out.println("Received dateTime string: " + dateTimeStr);
+                log.debug("Received live session scheduledDateTime string: {}", dateTimeStr);
                 
                 // Handle different date formats
                 if (dateTimeStr.contains("T")) {
@@ -129,7 +128,6 @@ public class LiveSessionController {
                             dateTimeStr = dateTimeStr.substring(0, tzIndex);
                         }
                     }
-                    
                     // Count colons in the entire string to determine format
                     long totalColons = dateTimeStr.chars().filter(ch -> ch == ':').count();
                     if (totalColons == 1) {
@@ -137,14 +135,13 @@ public class LiveSessionController {
                         dateTimeStr = dateTimeStr + ":00";
                     }
                     
-                    System.out.println("Parsing dateTime: " + dateTimeStr);
                     scheduledDateTime = LocalDateTime.parse(dateTimeStr);
-                    System.out.println("Parsed successfully: " + scheduledDateTime);
+                    log.debug("Parsed scheduledDateTime successfully: {}", scheduledDateTime);
                 } else {
                     return ResponseEntity.badRequest().body(Map.of("error", "Invalid date format. Please use format: YYYY-MM-DDTHH:MM"));
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Failed to parse scheduledDateTime '{}' for live session: {}", request.scheduledDateTime(), e.getMessage(), e);
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid date format. Please use format: YYYY-MM-DDTHH:MM. Error: " + e.getMessage()));
             }
             
@@ -166,7 +163,7 @@ public class LiveSessionController {
                     request.courseId()
             );
             
-            System.out.println("Live session created successfully with ID: " + created.getId());
+            log.info("Live session created successfully with ID {} for course {}", created.getId(), request.courseId());
             
             return ResponseEntity.ok(Map.of(
                     "id", created.getId(),
@@ -175,10 +172,10 @@ public class LiveSessionController {
                     "message", "Live session created successfully"
             ));
         } catch (RuntimeException e) {
-            e.printStackTrace();
+            log.error("Failed to create live session (validation/runtime error) for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to create live session"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unexpected error while creating live session for user {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "An error occurred: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")));
         }
     }

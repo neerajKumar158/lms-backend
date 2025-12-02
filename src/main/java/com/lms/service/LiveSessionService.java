@@ -3,6 +3,7 @@ package com.lms.service;
 import com.lms.domain.*;
 import com.lms.repository.*;
 import com.lms.repository.CourseEnrollmentRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class LiveSessionService {
 
@@ -71,7 +73,8 @@ public class LiveSessionService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to send live session reminder emails: " + e.getMessage());
+            log.error("Failed to send live session reminder emails for session {} and course {}: {}",
+                    saved.getId(), courseId, e.getMessage(), e);
         }
 
         return saved;
@@ -158,7 +161,7 @@ public class LiveSessionService {
                 return s1.getScheduledDateTime().compareTo(s2.getScheduledDateTime());
             });
             
-            System.out.println("Found " + result.size() + " sessions for student dashboard (all courses)");
+            log.debug("Found {} sessions for student dashboard (all courses)", result.size());
             return result;
         } else {
             // Get sessions for specific course
@@ -182,7 +185,7 @@ public class LiveSessionService {
                     })
                     .toList();
             
-            System.out.println("Found " + filtered.size() + " sessions for course " + courseId);
+            log.debug("Found {} sessions for course {}", filtered.size(), courseId);
             return filtered;
         }
     }

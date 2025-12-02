@@ -2,6 +2,7 @@ package com.lms.config;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +17,7 @@ import java.util.Set;
  * Data Loader - Creates sample featured courses and demo users
  * Runs on application startup
  */
+@Slf4j
 @Component
 public class LmsDataLoader implements CommandLineRunner {
 
@@ -39,29 +41,29 @@ public class LmsDataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        System.out.println("Initializing default users and sample data...");
+        log.info("Initializing default users and sample data...");
 
         try {
             // Create default admin user
             UserAccount admin = createDefaultAdmin();
-            System.out.println("Default admin created: " + admin.getEmail() + " / Password: admin123");
+            log.info("Default admin created: {} / Password: admin123", admin.getEmail());
             
             // Create default teacher user
             UserAccount teacher = createDefaultTeacher();
-            System.out.println("Default teacher created: " + teacher.getEmail() + " / Password: teacher123");
+            log.info("Default teacher created: {} / Password: teacher123", teacher.getEmail());
             
             // Create default student user
             UserAccount student = createDefaultStudent();
-            System.out.println("Default student created: " + student.getEmail() + " / Password: student123");
+            log.info("Default student created: {} / Password: student123", student.getEmail());
             
             // Check if featured courses already exist
             long featuredCount = courseRepository.findFeaturedPublishedCourses().size();
             if (featuredCount >= 10) {
-                System.out.println("Featured courses already exist (" + featuredCount + "). Skipping course creation.");
+                log.info("Featured courses already exist ({}). Skipping course creation.", featuredCount);
                 return;
             }
 
-            System.out.println("Creating sample courses... (Current featured courses: " + featuredCount + ")");
+            log.info("Creating sample courses... (Current featured courses: {})", featuredCount);
             
             // Create categories
             CourseCategory programming = createCategory("Programming", "Learn programming languages and frameworks");
@@ -69,7 +71,7 @@ public class LmsDataLoader implements CommandLineRunner {
             CourseCategory design = createCategory("Design", "UI/UX and graphic design courses");
             CourseCategory dataScience = createCategory("Data Science", "Data analysis and machine learning");
             CourseCategory marketing = createCategory("Marketing", "Digital marketing and SEO");
-            System.out.println("Categories created");
+            log.info("Sample course categories created");
 
             // Create featured courses
             int created = 0;
@@ -109,14 +111,13 @@ public class LmsDataLoader implements CommandLineRunner {
                 "Introduction to machine learning concepts, algorithms, and practical applications using Python.",
                 new BigDecimal("1799"), Course.CourseLevel.INTERMEDIATE, dataScience, teacher, true) != null ? 1 : 0;
 
-            created += createFeaturedCourse("Graphic Design for Beginners", 
+            created += createFeaturedCourse("Graphic Design for Beginners",
                 "Learn graphic design principles, tools, and techniques. Create stunning visuals for web and print.",
                 new BigDecimal("899"), Course.CourseLevel.BEGINNER, design, teacher, true) != null ? 1 : 0;
 
-            System.out.println("Sample data loaded successfully! Created " + created + " featured courses.");
+            log.info("Sample data loaded successfully! Created {} featured courses.", created);
         } catch (Exception e) {
-            System.err.println("Error loading sample data: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading sample data: {}", e.getMessage(), e);
         }
     }
 
@@ -254,8 +255,7 @@ public class LmsDataLoader implements CommandLineRunner {
             lecture2.setIsFree(true);
             lectureRepository.save(lecture2);
         } catch (Exception e) {
-            System.err.println("Error adding sample content for course " + course.getId() + ": " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error adding sample content for course {}: {}", course.getId(), e.getMessage(), e);
         }
     }
 

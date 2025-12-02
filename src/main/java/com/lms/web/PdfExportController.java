@@ -2,6 +2,7 @@ package com.lms.web;
 
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.PdfExportService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/export")
 public class PdfExportController {
@@ -53,7 +55,8 @@ public class PdfExportController {
                     .headers(headers)
                     .body(pdfBytes);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to export report card for course {} (studentId={}): {}",
+                    courseId, studentId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -71,7 +74,7 @@ public class PdfExportController {
                     .headers(headers)
                     .body(pdfBytes);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to export certificate {}: {}", certificateNumber, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

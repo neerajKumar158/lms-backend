@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.UserAccount;
 import com.lms.repository.UserAccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class EmailNotificationService {
 
@@ -52,7 +54,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send enrollment email: " + e.getMessage());
+                log.error("Failed to send enrollment email to user {} for course {}: {}",
+                        userId, courseTitle, e.getMessage(), e);
             }
         });
     }
@@ -88,7 +91,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send grade notification email: " + e.getMessage());
+                log.error("Failed to send grade notification email to user {} for assignment '{}' in course '{}': {}",
+                        userId, assignmentTitle, courseTitle, e.getMessage(), e);
             }
         });
     }
@@ -124,7 +128,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send quiz result email: " + e.getMessage());
+                log.error("Failed to send quiz result email to user {} for quiz '{}' in course '{}': {}",
+                        userId, quizTitle, courseTitle, e.getMessage(), e);
             }
         });
     }
@@ -157,7 +162,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send announcement email: " + e.getMessage());
+                log.error("Failed to send announcement email to user {} for course '{}': {}",
+                        userId, courseTitle, e.getMessage(), e);
             }
         });
     }
@@ -188,7 +194,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send certificate email: " + e.getMessage());
+                log.error("Failed to send certificate email to user {} for course '{}' (certificate {}): {}",
+                        userId, courseTitle, certificateNumber, e.getMessage(), e);
             }
         });
     }
@@ -222,7 +229,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send payment confirmation email: " + e.getMessage());
+                log.error("Failed to send payment confirmation email to user {} for course '{}' (payment {}): {}",
+                        userId, courseTitle, paymentId, e.getMessage(), e);
             }
         });
     }
@@ -256,7 +264,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send live session reminder email: " + e.getMessage());
+                log.error("Failed to send live session reminder email to user {} for course '{}' (session '{}'): {}",
+                        userId, courseTitle, sessionTitle, e.getMessage(), e);
             }
         });
     }
@@ -290,7 +299,8 @@ public class EmailNotificationService {
 
                 mailSender.send(message);
             } catch (Exception e) {
-                System.err.println("Failed to send assignment deadline reminder email: " + e.getMessage());
+                log.error("Failed to send assignment deadline reminder email to user {} for course '{}' (assignment '{}'): {}",
+                        userId, courseTitle, assignmentTitle, e.getMessage(), e);
             }
         });
     }

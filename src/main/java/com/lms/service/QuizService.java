@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class QuizService {
 
@@ -298,7 +300,8 @@ public class QuizService {
             }
         } catch (Exception e) {
             // Log but don't fail the submission
-            System.err.println("Failed to send quiz notification: " + e.getMessage());
+            log.error("Failed to send quiz notification for attempt {} (quizId={}, studentId={}): {}",
+                    attemptId, quiz.getId(), attempt.getStudent().getId(), e.getMessage(), e);
         }
         
         return savedAttempt;

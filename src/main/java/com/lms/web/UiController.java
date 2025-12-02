@@ -1,5 +1,6 @@
 package com.lms.web;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+@Slf4j
 @Controller
 @RequestMapping("/ui")
 public class UiController {
@@ -33,7 +35,7 @@ public class UiController {
 
     @GetMapping("/lms/courses/{id}")
     public String lmsCourseDetail(@PathVariable("id") Long id, Model model) {
-        System.out.println("Loading course detail page for ID: " + id);
+        log.info("Loading course detail page for ID: {}", id);
         model.addAttribute("courseId", id);
         return "lms/course-detail";
     }
@@ -190,6 +192,11 @@ public class UiController {
     @GetMapping("/lms/admin/manage")
     public String adminManage(Model model) {
         return "lms/admin-manage";
+    }
+
+    @GetMapping("/lms/messaging")
+    public String messaging(Model model) {
+        return "lms/messaging";
     }
 }
 

@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class CertificateService {
 
@@ -32,6 +34,9 @@ public class CertificateService {
 
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<CourseCertificate> getStudentCertificates(Long studentId) {
@@ -91,13 +96,29 @@ public class CertificateService {
 
         CourseCertificate saved = certificateRepository.save(certificate);
 
-        // Send certificate email notification
+        // In-app + email notifications for certificate issuance
         try {
+            // In-app notification
+            try {
+                notificationService.createNotification(
+                        student.getId(),
+                        "Certificate Issued",
+                        "You have earned a certificate for the course '" + course.getTitle() + "'.",
+                        Notification.NotificationType.CERTIFICATE,
+                        "/ui/lms/certificate/" + certificateNumber
+                );
+            } catch (Exception ex) {
+                log.error("Failed to create certificate notification for student {} and course {}: {}",
+                        studentId, courseId, ex.getMessage(), ex);
+            }
+
+            // Email notification
             if (emailNotificationService != null) {
                 emailNotificationService.sendCertificateIssuedEmail(studentId, course.getTitle(), certificateNumber);
             }
         } catch (Exception e) {
-            System.err.println("Failed to send certificate email: " + e.getMessage());
+            log.error("Failed to send certificate notifications for student {} and course {}: {}",
+                    studentId, courseId, e.getMessage(), e);
         }
 
         return saved;

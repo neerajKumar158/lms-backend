@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.util.List;
  * Scheduled Reminder Service
  * Automatically sends reminders for live sessions and assignment deadlines
  */
+@Slf4j
 @Service
 public class ScheduledReminderService {
 
@@ -29,6 +31,9 @@ public class ScheduledReminderService {
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
 
+    @Autowired(required = false)
+    private NotificationService notificationService;
+
     /**
      * Send reminders for live sessions scheduled in the next 24 hours
      * Runs every hour
@@ -36,7 +41,7 @@ public class ScheduledReminderService {
     @Scheduled(cron = "0 0 * * * ?") // Every hour at minute 0
     @Transactional
     public void sendLiveSessionReminders() {
-        if (emailNotificationService == null) return;
+        if (emailNotificationService == null && notificationService == null) return;
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime tomorrow = now.plusHours(24);
@@ -57,15 +62,33 @@ public class ScheduledReminderService {
             
             for (CourseEnrollment enrollment : enrollments) {
                 if ("ACTIVE".equals(enrollment.getStatus())) {
+                    Long studentId = enrollment.getStudent().getId();
                     try {
-                        emailNotificationService.sendLiveSessionReminderEmail(
-                                enrollment.getStudent().getId(),
-                                session.getCourse().getTitle(),
-                                session.getTitle() != null ? session.getTitle() : "Live Session",
-                                session.getScheduledDateTime()
-                        );
+                        // Email reminder
+                        if (emailNotificationService != null) {
+                            emailNotificationService.sendLiveSessionReminderEmail(
+                                    studentId,
+                                    session.getCourse().getTitle(),
+                                    session.getTitle() != null ? session.getTitle() : "Live Session",
+                                    session.getScheduledDateTime()
+                            );
+                        }
+
+                        // In-app notification
+                        if (notificationService != null) {
+                            notificationService.createNotification(
+                                    studentId,
+                                    "Upcoming Live Session",
+                                    "You have a live session '" +
+                                            (session.getTitle() != null ? session.getTitle() : "Live Session") +
+                                            "' scheduled for " + session.getScheduledDateTime() + ".",
+                                    Notification.NotificationType.INFO,
+                                    "/ui/lms/live/" + session.getId()
+                            );
+                        }
                     } catch (Exception e) {
-                        System.err.println("Failed to send live session reminder: " + e.getMessage());
+                        log.error("Failed to send live session reminder for session {} and student {}: {}",
+                                session.getId(), studentId, e.getMessage(), e);
                     }
                 }
             }
@@ -79,7 +102,7 @@ public class ScheduledReminderService {
     @Scheduled(cron = "0 0 */6 * * ?") // Every 6 hours
     @Transactional
     public void sendAssignmentDeadlineReminders() {
-        if (emailNotificationService == null) return;
+        if (emailNotificationService == null && notificationService == null) return;
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime twoDaysLater = now.plusHours(48);
@@ -98,21 +121,39 @@ public class ScheduledReminderService {
             
             for (CourseEnrollment enrollment : enrollments) {
                 if ("ACTIVE".equals(enrollment.getStatus())) {
+                    Long studentId = enrollment.getStudent().getId();
                     // Check if student has already submitted
                     boolean hasSubmitted = assignment.getSubmissions() != null &&
                             assignment.getSubmissions().stream()
-                                    .anyMatch(s -> s.getStudent().getId().equals(enrollment.getStudent().getId()));
+                                    .anyMatch(s -> s.getStudent().getId().equals(studentId));
                     
                     if (!hasSubmitted) {
                         try {
-                            emailNotificationService.sendAssignmentDeadlineReminderEmail(
-                                    enrollment.getStudent().getId(),
-                                    assignment.getCourse().getTitle(),
-                                    assignment.getTitle(),
-                                    assignment.getDueDate()
-                            );
+                            // Email reminder
+                            if (emailNotificationService != null) {
+                                emailNotificationService.sendAssignmentDeadlineReminderEmail(
+                                        studentId,
+                                        assignment.getCourse().getTitle(),
+                                        assignment.getTitle(),
+                                        assignment.getDueDate()
+                                );
+                            }
+
+                            // In-app notification
+                            if (notificationService != null) {
+                                notificationService.createNotification(
+                                        studentId,
+                                        "Assignment Due Soon",
+                                        "Your assignment '" + assignment.getTitle() +
+                                                "' for course '" + assignment.getCourse().getTitle() +
+                                                "' is due on " + assignment.getDueDate() + ".",
+                                        Notification.NotificationType.WARNING,
+                                        "/ui/lms/assignment/submit"
+                                );
+                            }
                         } catch (Exception e) {
-                            System.err.println("Failed to send assignment reminder: " + e.getMessage());
+                            log.error("Failed to send assignment reminder for assignment {} and student {}: {}",
+                                    assignment.getId(), studentId, e.getMessage(), e);
                         }
                     }
                 }

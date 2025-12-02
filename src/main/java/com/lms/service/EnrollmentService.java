@@ -2,6 +2,7 @@ package com.lms.service;
 
 import com.lms.domain.*;
 import com.lms.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.Optional;
  * @author VisionWaves
  * @version 1.0
  */
+@Slf4j
 @Service
 public class EnrollmentService {
 
@@ -35,6 +37,9 @@ public class EnrollmentService {
 
     @Autowired(required = false)
     private EmailNotificationService emailNotificationService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     /**
      * Checks if a student is enrolled in a specific course.
@@ -93,13 +98,29 @@ public class EnrollmentService {
 
         CourseEnrollment saved = enrollmentRepository.save(enrollment);
 
-        // Send enrollment email notification
+        // In-app notification + email notification for enrollment
         try {
+            // In-app notification
+            try {
+                notificationService.createNotification(
+                        student.getId(),
+                        "Enrolled in Course",
+                        "You have successfully enrolled in the course '" + course.getTitle() + "'.",
+                        com.lms.domain.Notification.NotificationType.SUCCESS,
+                        "/ui/lms/courses/" + course.getId()
+                );
+            } catch (Exception e) {
+                log.error("Failed to create enrollment notification for student {} and course {}: {}",
+                        studentId, courseId, e.getMessage(), e);
+            }
+
+            // Email notification
             if (emailNotificationService != null) {
                 emailNotificationService.sendCourseEnrollmentEmail(studentId, course.getTitle());
             }
         } catch (Exception e) {
-            System.err.println("Failed to send enrollment email: " + e.getMessage());
+            log.error("Failed to send enrollment notifications for student {} and course {}: {}",
+                    studentId, courseId, e.getMessage(), e);
         }
 
         return saved;

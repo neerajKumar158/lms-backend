@@ -3,6 +3,7 @@ package com.lms.service;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class RazorpayService {
 
@@ -67,7 +69,7 @@ public class RazorpayService {
                     "orderId", orderId
             );
         } catch (RazorpayException e) {
-            e.printStackTrace();
+            log.error("Failed to create Razorpay order for internal orderId {}: {}", orderId, e.getMessage(), e);
             return Map.of("error", "Failed to create Razorpay order: " + e.getMessage());
         }
     }
@@ -88,7 +90,8 @@ public class RazorpayService {
 
             return com.razorpay.Utils.verifyPaymentSignature(attributes, keySecret);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error verifying Razorpay payment for order {} and payment {}: {}",
+                    razorpayOrderId, razorpayPaymentId, e.getMessage(), e);
             return false;
         }
     }
@@ -112,7 +115,7 @@ public class RazorpayService {
                     "order_id", payment.get("order_id")
             );
         } catch (RazorpayException e) {
-            e.printStackTrace();
+            log.error("Failed to fetch Razorpay payment {}: {}", paymentId, e.getMessage(), e);
             return Map.of("error", "Failed to fetch payment: " + e.getMessage());
         }
     }
@@ -142,7 +145,7 @@ public class RazorpayService {
             com.razorpay.Refund refund = razorpayClient.refunds.create(refundRequest);
             return refund.get("id").toString();
         } catch (RazorpayException e) {
-            e.printStackTrace();
+            log.error("Failed to create Razorpay refund for payment {}: {}", paymentId, e.getMessage(), e);
             throw new RazorpayException("Failed to create refund: " + e.getMessage());
         }
     }

@@ -1,6 +1,7 @@
 package com.lms.security;
 
 import com.lms.repository.UserAccountRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +17,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Security Configuration - Phase 2.1
@@ -28,6 +37,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:}")
+    private String allowedOriginsConfig;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -60,8 +72,41 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Default localhost origins
+        List<String> defaultOrigins = List.of(
+                "http://localhost:9192",
+                "http://localhost:3000",
+                "http://localhost:8080"
+        );
+        
+        // Add configurable origins from application properties
+        List<String> allOrigins = Stream.concat(
+                defaultOrigins.stream(),
+                allowedOriginsConfig != null && !allowedOriginsConfig.trim().isEmpty()
+                        ? Arrays.stream(allowedOriginsConfig.split(","))
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                        : Stream.empty()
+        ).collect(Collectors.toList());
+        
+        configuration.setAllowedOrigins(allOrigins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -106,6 +151,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/lms/certificates/**").authenticated()
                         .requestMatchers("/api/lms/notifications/**").authenticated()
                         
+                        // Messaging endpoints (authenticated users)
+                        .requestMatchers("/api/lms/messaging/**").authenticated()
+                        
+                        // WebSocket endpoint (authentication handled by interceptor)
+                        .requestMatchers("/ws/**").permitAll()
+                        
                         // Organization endpoints
                         .requestMatchers("/api/lms/organization/**").hasAnyRole("ORGANIZATION", "ADMIN")
                         
@@ -134,8 +185,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/lms/refunds/request/**", "POST").authenticated() // Students: request refund
                         .requestMatchers("/api/lms/refunds/pending", "GET").hasRole("ADMIN") // Admin: view pending refunds
                         .requestMatchers("/api/lms/refunds/all", "GET").hasRole("ADMIN") // Admin: view all refunds
-                        .requestMatchers("/api/lms/refunds/**/approve", "POST").hasRole("ADMIN") // Admin: approve refund
-                        .requestMatchers("/api/lms/refunds/**/reject", "POST").hasRole("ADMIN") // Admin: reject refund
+                        .requestMatchers("/api/lms/refunds/*/approve", "POST").hasRole("ADMIN") // Admin: approve refund
+                        .requestMatchers("/api/lms/refunds/*/reject", "POST").hasRole("ADMIN") // Admin: reject refund
                         
                         // All other endpoints require authentication
                         .anyRequest().authenticated()

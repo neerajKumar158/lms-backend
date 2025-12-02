@@ -3,6 +3,7 @@ package com.lms.web;
 import com.lms.domain.CourseCertificate;
 import com.lms.repository.UserAccountRepository;
 import com.lms.service.CertificateService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/lms/certificates")
 public class CertificateController {
@@ -32,7 +34,7 @@ public class CertificateController {
             List<CourseCertificate> certificates = certificateService.getStudentCertificates(user.getId());
             return ResponseEntity.ok(certificates);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load certificates for principal {}: {}", principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load certificates"));
         }
     }
@@ -52,7 +54,8 @@ public class CertificateController {
                 return ResponseEntity.ok(Map.of("message", "Certificate not yet issued"));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to load certificate for course {} (principal={}): {}", courseId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to load certificate"));
         }
     }
@@ -72,7 +75,8 @@ public class CertificateController {
                     "message", "Certificate issued successfully"
             ));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to issue certificate for course {} (principal={}): {}", courseId,
+                    principal != null ? principal.getUsername() : "unknown", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to issue certificate"));
         }
     }
@@ -94,7 +98,7 @@ public class CertificateController {
                 return ResponseEntity.ok(Map.of("valid", false, "message", "Certificate not found"));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to verify certificate {}: {}", certificateNumber, e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to verify certificate"));
         }
     }

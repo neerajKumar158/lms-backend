@@ -3,6 +3,7 @@ package com.lms.service;
 import com.lms.domain.*;
 import com.lms.repository.*;
 import com.lms.repository.CourseEnrollmentRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.Optional;
  * @author VisionWaves
  * @version 1.0
  */
+@Slf4j
 @Service
 public class AssignmentService {
 
@@ -54,9 +56,9 @@ public class AssignmentService {
      */
     @Transactional(readOnly = true)
     public List<Assignment> getAssignmentsByCourse(Long courseId) {
-        System.out.println("Fetching assignments for course: " + courseId);
+        log.info("Fetching assignments for course: {}", courseId);
         List<Assignment> assignments = assignmentRepository.findByCourseId(courseId);
-        System.out.println("Found " + (assignments != null ? assignments.size() : 0) + " assignments for course " + courseId);
+        log.info("Found {} assignments for course {}", (assignments != null ? assignments.size() : 0), courseId);
         
         // Initialize course relationship to avoid lazy loading issues
         if (assignments != null && !assignments.isEmpty()) {
@@ -64,10 +66,13 @@ public class AssignmentService {
                 if (a.getCourse() != null) {
                     a.getCourse().getId(); // Trigger lazy loading
                 }
-                System.out.println("Assignment: " + a.getId() + " - " + a.getTitle() + " (Course: " + (a.getCourse() != null ? a.getCourse().getId() : "null") + ")");
+                log.debug("Assignment: {} - {} (Course: {})",
+                        a.getId(),
+                        a.getTitle(),
+                        (a.getCourse() != null ? a.getCourse().getId() : "null"));
             });
         } else {
-            System.out.println("No assignments found for course " + courseId);
+            log.info("No assignments found for course {}", courseId);
         }
         return assignments != null ? assignments : new java.util.ArrayList<>();
     }
@@ -91,8 +96,7 @@ public class AssignmentService {
      */
     @Transactional
     public Assignment createAssignment(Long courseId, Assignment assignment) {
-        System.out.println("Creating assignment for course: " + courseId);
-        System.out.println("Assignment title: " + assignment.getTitle());
+        log.info("Creating assignment for course: {}, title: {}", courseId, assignment.getTitle());
         
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
@@ -102,15 +106,17 @@ public class AssignmentService {
         assignment.setUpdatedAt(LocalDateTime.now());
         
         Assignment saved = assignmentRepository.save(assignment);
-        System.out.println("Assignment saved with ID: " + saved.getId());
-        System.out.println("Assignment course ID: " + (saved.getCourse() != null ? saved.getCourse().getId() : "null"));
+        log.info("Assignment saved with ID: {}, courseId: {}",
+                saved.getId(),
+                (saved.getCourse() != null ? saved.getCourse().getId() : "null"));
         
         // Verify it was saved correctly
         Optional<Assignment> verify = assignmentRepository.findById(saved.getId());
         if (verify.isPresent()) {
-            System.out.println("Verified assignment exists in database with course ID: " + verify.get().getCourse().getId());
+            log.debug("Verified assignment {} exists in database with course ID: {}",
+                    verify.get().getId(), verify.get().getCourse().getId());
         } else {
-            System.err.println("ERROR: Assignment was not found after saving!");
+            log.error("Assignment was not found after saving! ID: {}", saved.getId());
         }
         
         // Send deadline reminder emails to enrolled students (if due date is in future)
@@ -128,7 +134,8 @@ public class AssignmentService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to send assignment deadline reminder emails: " + e.getMessage());
+            log.error("Failed to send assignment deadline reminder emails for course {} and assignment {}: {}",
+                    courseId, saved.getId(), e.getMessage(), e);
         }
         
         return saved;
@@ -226,7 +233,8 @@ public class AssignmentService {
             }
         } catch (Exception e) {
             // Log but don't fail the submission
-            System.err.println("Failed to create notification for teacher: " + e.getMessage());
+            log.error("Failed to create assignment submission notification for assignment {} and student {}: {}",
+                    assignmentId, studentId, e.getMessage(), e);
         }
         
         return saved;
@@ -293,7 +301,8 @@ public class AssignmentService {
             }
         } catch (Exception e) {
             // Log but don't fail the grading
-            System.err.println("Failed to create notification: " + e.getMessage());
+            log.error("Failed to create graded assignment notification for submission {}: {}",
+                    submissionId, e.getMessage(), e);
         }
 
         return saved;
