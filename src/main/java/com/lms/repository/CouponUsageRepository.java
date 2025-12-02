@@ -18,3 +18,4 @@ public interface CouponUsageRepository extends JpaRepository<CouponUsage, Long> 
 
 
 
+

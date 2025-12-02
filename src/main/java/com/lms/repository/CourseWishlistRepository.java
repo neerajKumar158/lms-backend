@@ -19,3 +19,4 @@ public interface CourseWishlistRepository extends JpaRepository<CourseWishlist, 
 
 
 
+

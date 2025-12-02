@@ -52,3 +52,4 @@ MySQL 8.0+ uses `caching_sha2_password` by default, which is fully supported by 
 
 
 
+
