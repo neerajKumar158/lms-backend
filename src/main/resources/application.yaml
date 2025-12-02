@@ -81,3 +81,46 @@ razorpay:
   key-secret: ${RAZORPAY_KEY_SECRET:your_secret_key}  # Replace with your Razorpay Key Secret
   enabled: ${RAZORPAY_ENABLED:true}  # Set to false to use mock gateway
 
+# Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 1 hour default TTL
+
+# Rate Limiting Configuration
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # Per user/IP limits
+    api:
+      requests-per-minute: ${RATE_LIMIT_API_RPM:60}
+      requests-per-hour: ${RATE_LIMIT_API_RPH:1000}
+    # Auth endpoints (stricter)
+    auth:
+      requests-per-minute: ${RATE_LIMIT_AUTH_RPM:5}
+      requests-per-hour: ${RATE_LIMIT_AUTH_RPH:20}
+    # Upload endpoints (stricter)
+    upload:
+      requests-per-minute: ${RATE_LIMIT_UPLOAD_RPM:10}
+      requests-per-hour: ${RATE_LIMIT_UPLOAD_RPH:100}
+
+# AWS S3 Configuration
+aws:
+  s3:
+    enabled: ${AWS_S3_ENABLED:false}  # Set to true to use S3, false for local storage
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    region: ${AWS_REGION:us-east-1}
+    bucket-name: ${AWS_S3_BUCKET_NAME:lms-uploads}
+    endpoint: ${AWS_S3_ENDPOINT:}  # Optional: for S3-compatible services (e.g., DigitalOcean Spaces)
+

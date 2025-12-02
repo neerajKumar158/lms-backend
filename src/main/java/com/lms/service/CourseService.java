@@ -4,6 +4,8 @@ import com.lms.domain.*;
 import com.lms.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class CourseService {
      * @return the list of all published courses
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "courses", key = "'all-published'")
     public List<Course> getAllPublishedCourses() {
         try {
             List<Course> courses = courseRepository.findByStatus(Course.CourseStatus.PUBLISHED);
@@ -71,6 +74,7 @@ public class CourseService {
      * @return the list of free published courses
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "courses", key = "'free'")
     public List<Course> getFreeCourses() {
         try {
             List<Course> courses = courseRepository.findFreePublishedCourses();
@@ -98,6 +102,7 @@ public class CourseService {
      * @return the list of featured published courses
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "popularCourses", key = "'featured'")
     public List<Course> getFeaturedCourses() {
         try {
             List<Course> courses = courseRepository.findFeaturedPublishedCourses();
@@ -132,6 +137,7 @@ public class CourseService {
      * @return the list of published courses matching the keyword
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "searchResults", key = "#keyword.toLowerCase()")
     public List<Course> searchCourses(String keyword) {
         try {
             List<Course> courses = courseRepository.searchPublishedCourses(keyword);
@@ -160,6 +166,7 @@ public class CourseService {
      * @return the Optional containing the course if found, empty otherwise
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "courseDetails", key = "#id")
     public Optional<Course> getCourseById(Long id) {
         try {
             Optional<Course> courseOpt = courseRepository.findById(id);
@@ -212,6 +219,7 @@ public class CourseService {
      * @return the created course entity
      */
     @Transactional
+    @CacheEvict(value = {"courses", "popularCourses", "searchResults", "courseDetails"}, allEntries = true)
     public Course createCourse(Course course, Long instructorId) {
         UserAccount instructor = userAccountRepository.findById(instructorId)
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
@@ -234,6 +242,7 @@ public class CourseService {
      * @return the updated course entity
      */
     @Transactional
+    @CacheEvict(value = {"courses", "popularCourses", "searchResults", "courseDetails"}, allEntries = true)
     public Course updateCourse(Long courseId, Course updatedCourse) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
@@ -290,6 +299,7 @@ public class CourseService {
      * @param courseId the ID of the course to delete
      */
     @Transactional
+    @CacheEvict(value = {"courses", "popularCourses", "searchResults", "courseDetails"}, allEntries = true)
     public void deleteCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
